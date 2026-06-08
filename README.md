@@ -1,4 +1,5 @@
 # Penpot AI Kit
+<img width="1771" height="699" alt="penpot-AI-kit" src="https://github.com/user-attachments/assets/2ca782b0-f773-4675-bf41-c66cc872ea69" />
 
 **Let an AI assistant work directly inside your Penpot file, while you stay in control.**
 
@@ -13,8 +14,8 @@ This is not a “type a prompt and get a flat image” workflow. The AI creates 
 The kit is meant to be adapted. You can shape it around your team’s workflow, add new skills, refine the agent’s instructions, and share improvements so it works better across different projects and design systems.
 
 > New to this? The fastest path is to let your AI assistant **install the kit for you** —
-> see **[Fastest setup](#fastest-setup--let-your-assistant-install-it)** below. Prefer to do it by
-> hand? The **[Quick start for designers](#quick-start-for-designers)** walks every step. No coding required.
+> see **[Fastest setup](#fastest-setup--let-your-assistant-install-it)** below.
+> Prefer to do it by hand? The **[Quick start for designers](#quick-start-for-designers)** walks every step. No coding required.
 
 ---
 

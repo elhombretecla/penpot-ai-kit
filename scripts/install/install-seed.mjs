@@ -10,10 +10,11 @@
  * Usage:   node scripts/install/install-seed.mjs [--dest <dir>] [--dry-run]
  * Output:  JSON { ok, src, dest, version, fileCount, touched:[dest] }.
  */
-import { cp, readFile, readdir, stat } from "node:fs/promises";
+import { cp, readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, relative, sep } from "node:path";
-import { KIT_SOURCE, kitHome, isInside, arg, flag } from "./lib.mjs";
+import { KIT_SOURCE, kitHome, isInside, arg, flag, kitDigest, seedProvenancePath, KIT_EXCLUDE } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const dest = arg(argv, "dest", kitHome());
@@ -26,12 +27,11 @@ const fail = (m) => { out({ ok: false, error: m }); process.exit(1); };
 if (isInside(dest, KIT_SOURCE)) fail(`--dest must be OUTSIDE the kit source (got ${dest} inside ${KIT_SOURCE})`);
 if (isInside(KIT_SOURCE, dest)) fail(`--dest must not contain the kit source (${dest} contains ${KIT_SOURCE})`);
 
-// Exclude dev-only / heavy / generated paths from the runtime seed.
-const EXCLUDE = new Set([".git", "node_modules", "evals", "dist", ".penpot-kit-install.json", "install-manifest.json"]);
+// Exclude dev-only / heavy / generated paths from the runtime seed (shared with the digest in lib.mjs).
 const filter = (srcPath) => {
   if (srcPath === KIT_SOURCE) return true;
   const segs = relative(KIT_SOURCE, srcPath).split(sep);
-  return !segs.some((s) => EXCLUDE.has(s));
+  return !segs.some((s) => KIT_EXCLUDE.has(s));
 };
 
 async function countFiles(dir) {
@@ -54,4 +54,12 @@ if (dryRun) {
 
 await cp(KIT_SOURCE, dest, { recursive: true, force: true, filter });
 const fileCount = existsSync(dest) ? await countFiles(dest) : 0;
-out({ ok: true, src: KIT_SOURCE, dest, version, fileCount, touched: [dest], note: "Seed installed. The original clone is now disposable. Re-run to update after a git pull." });
+
+// Stamp provenance so a later session can cheaply tell if the source clone moved on (digest = content
+// fingerprint; commit = git HEAD if available). check-updates.mjs reads this back.
+let sourceCommit = null;
+try { sourceCommit = execFileSync("git", ["-C", KIT_SOURCE, "rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim(); } catch {}
+const provenance = { sourcePath: KIT_SOURCE, sourceDigest: kitDigest(KIT_SOURCE), sourceCommit, version, seededAtVersion: version };
+await writeFile(seedProvenancePath(dest), JSON.stringify(provenance, null, 2) + "\n", "utf8");
+
+out({ ok: true, src: KIT_SOURCE, dest, version, fileCount, digest: provenance.sourceDigest, commit: sourceCommit, touched: [dest], note: "Seed installed. The original clone is now disposable. Re-run to update after a git pull." });

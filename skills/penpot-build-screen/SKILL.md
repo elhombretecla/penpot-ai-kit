@@ -56,15 +56,20 @@ Act as a **senior product/visual designer** who makes deliberate aesthetic decis
 
 **Phase 2..N — Sections.** Build each section as a tokenized flex Board reusing components (`scripts/buildSection.js`). One section per `execute_code` call. ✋ Checkpoint after each (`export_shape`).
 
-**Phase N+1 — Assemble & critique.** `scripts/assembleScreen.js` composes sections; `scripts/auditScreenQuality.js` checks hierarchy, grid, token binding, quick contrast (`references/05-critique-framework.md`). Report.
+**Phase N+1 — Assemble & critique.** `scripts/assembleScreen.js` composes sections; `scripts/auditScreenQuality.js` checks **layout coverage (every board has flex/grid)**, token binding, on-grid spacing, naming (`references/05-critique-framework.md`). A non-empty `boardsWithoutLayout` fails the gate — add a layout to each flagged board before reporting done. Report.
 
 ## 7. Critical Rules
-1. Reuse existing components before creating raw shapes.
-2. Bind to semantic tokens; never hardcode color/spacing/radius/type.
-3. One section per call; checkpoint with `export_shape`.
-4. All spacing on the 4px grid; consistent rhythm.
-5. Don't bootstrap a full design system here — hand off to `penpot-foundations`.
-6. State responsive intent (sizing: fill/auto/fix) explicitly.
+1. **Flex by default — every container is a layout Board.** The instant you create a Board, give it a
+   flex (`addFlexLayout()`) or grid (`addGridLayout()`) layout *before* appending children — the screen
+   root, every section, AND every nested grouping (card, row, list, stat cluster, form field, button
+   group). NEVER arrange UI elements with absolute `x`/`y`, and NEVER use a plain Group to lay out UI.
+   A Board without a layout is a bug; the Phase N+1 audit (`boardsWithoutLayout`) fails the build if any exist.
+2. Reuse existing components before creating raw shapes.
+3. Bind to semantic tokens; never hardcode color/spacing/radius/type.
+4. One section per call; checkpoint with `export_shape`.
+5. All spacing on the 4px grid; consistent rhythm.
+6. Don't bootstrap a full design system here — hand off to `penpot-foundations`.
+7. State responsive intent (sizing: fill/auto/fix) explicitly.
 
 ## 8. Domain Architecture
 A screen = a root flex Board (column) → section Boards (each its own flex) → component instances +
@@ -96,6 +101,9 @@ Ledger under `RUN_ID`: `phase`, `screenBoardId`, `sections:[{name,id,done}]`, `s
 | "Generate the whole screen in one go." | One-shot output is generic and unauditable. | Build section by section with checkpoints. |
 | "Centered cards + generic gradient looks fine." | Distributive convergence → bland, off-brand UI. | Apply a deliberate style profile; justify aesthetic choices. |
 | "I'll set up tokens here real quick." | Foundations belong in their skill. | Hand off to `penpot-foundations` for anything beyond trivial. |
+| "I'll just position these with x/y, it's faster." | Absolute coords don't resize, reflow, or theme; off-system. | Wrap them in a flex/grid Board; order by append + gaps/align. |
+| "A plain Group is enough to bunch these together." | Groups don't lay out — they only bound. | Use a Board with `addFlexLayout()`; the audit flags layout-less boards. |
+| "This little container doesn't need a layout." | Every UI container needs one for rhythm + responsiveness. | Add flex/grid before appending children — no exceptions. |
 
 ## 14. Helper Code Snippets
 ```js

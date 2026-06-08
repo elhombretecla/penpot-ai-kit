@@ -44,6 +44,16 @@ The helpers live in `scripts/install/`; all accept `--dry-run` and print JSON. P
    OpenCode / Codex** were detected, the seed destination, and the user/global config path each would
    use. Anything else → `generic`. Note: **Codex's CLI and desktop App share `~/.codex`**, so one `codex`
    choice covers both.
+4. **Already installed?** Read the `install` block of the same output (`installNote` summarizes it):
+   - `install.installed === false` → fresh install; continue to Phase 1 normally.
+   - `install.installed === true && upToDate` → tell the user it's **already installed** at
+     `install.seedHome` (version, and the recorded `manifest.client`/`mode`/`mcpServer`). Don't blindly
+     reinstall — offer three choices: **update/repair** (re-run install, idempotent — refreshes the seed,
+     re-wires behavior, MCP skips unless `--force`), **change client/MCP mode** (re-run with new flags),
+     or **skip** (nothing to do; go to Phase 3 to verify the live bridge).
+   - `install.installed === true && !upToDate` → installed but the source is a **different version**;
+     recommend an **update** (re-seed; safe/idempotent) and proceed through Phase 1–2 with the same client.
+   The manifest tells you what was installed last time — reuse it as the default answers in Phase 1.
 
 ---
 
@@ -51,12 +61,19 @@ The helpers live in `scripts/install/`; all accept `--dry-run` and print JSON. P
 
 1. **Which client?** Offer the detected one as default; let them correct it or pick `generic`. If the
    user is talking to you *through* one of these, that's the target — say so and confirm.
-2. **Remote or local Penpot?** Remote (default) = hosted `penpot.app`, needs an **MCP Key**. Local =
-   self-hosted (`docs/setup-local.md`), no key.
+2. **Remote, local, or already configured?** Three choices — offer all three:
+   - **Remote** (default) = hosted `penpot.app`, needs an **MCP Key**. → `--mode remote`
+   - **Local** = self-hosted (`docs/setup-local.md`), no key. → `--mode local`
+   - **"Ya tengo el Penpot MCP instalado, no hace falta configurarlo"** = the user already has a working
+     Penpot MCP server in their client. → `--mode none` (skips the MCP step entirely; the kit still seeds
+     + wires behavior). Pick this whenever the user wants to skip MCP config — do **not** stall or abort.
 
 If **remote**, get the key safely:
 > "Open Penpot → **Account → Integrations → MCP Key**, copy it, and paste it here. It's a secret — I'll
 > write it only into your client's user config (never the repo), and never print it back."
+
+If **already configured** (`--mode none`), no key is needed and no MCP config is touched — proceed
+straight to Phase 2 with `--mode none`.
 
 **Key hygiene (non-negotiable):** pass the key via the `PENPOT_MCP_KEY` env var (or piped stdin), **never**
 as a CLI argument, and never repeat it. The scripts redact it everywhere.
@@ -78,6 +95,9 @@ PENPOT_MCP_KEY='<pasted-key>' node scripts/install/install.mjs --client <id> --m
 
 # local (no key):
 node scripts/install/install.mjs --client <id> --mode local [--target-dir <user-project>]
+
+# MCP already installed — skip MCP config (no key, no MCP write):
+node scripts/install/install.mjs --client <id> --mode none [--target-dir <user-project>]
 ```
 
 `install.mjs` chains **seed copy → MCP config → behavior → uninstall manifest** and prints one summary.
@@ -109,6 +129,29 @@ The install is real only once the live bridge answers:
    send them to `docs/troubleshooting.md` (Firefox easiest; Chrome allow the popup; Brave Shields off).
 
 Finish with a 4-line recap: client, MCP mode, seed location, and one example prompt to try next.
+
+---
+
+## Phase 4 — Staying up to date (the seed vs. the clone)
+
+The installed seed (`~/.penpot-ai-kit`) is a **copy** taken at seed-time. After the user edits the clone
+or `git pull`s, the seed is stale until re-seeded. `install-seed.mjs` stamps a content fingerprint into
+`~/.penpot-ai-kit/.penpot-kit-seed.json`; **`check-updates.mjs` compares it cheaply** (the hash is
+computed by Node — **zero model tokens**) and reports in one line whether the seed is behind:
+
+```bash
+node scripts/install/check-updates.mjs          # JSON; exit 0 = current, 10 = updates available
+node scripts/install/check-updates.mjs --hook    # SILENT when current; one actionable line when stale
+```
+
+- **Updates available** → re-run `install-seed.mjs` to refresh the seed. For Claude Code **native**
+  installs, also re-run `install-behavior.mjs` so `~/.claude/skills/` picks up the new content.
+- Runs from the clone **or** from the seed (it resolves the clone via the stamped `sourcePath`).
+
+**Elegant zero-touch option (Claude Code):** add a `SessionStart` hook that runs the `--hook` form. It
+prints nothing when current (no noise, no tokens) and surfaces a single "updates available — re-seed"
+line into context only when the clone has moved on. Offer to wire it; the command is:
+`node <clone>/scripts/install/check-updates.mjs --hook`. (Other clients: run the check manually, or alias it.)
 
 ## Safety rules (throughout)
 - **Confirm before writing.** Dry-run → show → apply (mirrors the kit's own Suggest → Apply-with-review).

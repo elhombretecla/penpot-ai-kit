@@ -9,8 +9,9 @@
  */
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
-import { cpSync, existsSync, readdirSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export const HOME = homedir();
 export const PLATFORM = process.platform; // "darwin" | "win32" | "linux"
@@ -112,6 +113,87 @@ export function buildSelfContainedSkills(seedPath, destSkillsDir, { dryRun = fal
     built.push(name);
   }
   return { skills: built, dest: destSkillsDir };
+}
+
+/** Parse JSON at `p`, returning null on missing/unreadable/invalid (never throws). */
+export function readJSON(p) {
+  try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; }
+}
+
+const versionOf = (root) => { const s = readJSON(join(root, "skills.json")); return s && s.version || null; };
+
+/** Provenance file written INTO the seed at seed-time so a later session can tell if the source moved on. */
+export const SEED_PROVENANCE_FILE = ".penpot-kit-seed.json";
+export const seedProvenancePath = (seedHome = kitHome()) => join(seedHome, SEED_PROVENANCE_FILE);
+
+// Dev-only / heavy / generated paths excluded from the runtime seed AND from the content digest, so the
+// digest reflects only what actually ships and changes meaningfully. Keep in sync with install-seed.mjs.
+export const KIT_EXCLUDE = new Set([
+  ".git", "node_modules", "evals", "dist",
+  ".penpot-kit-install.json", "install-manifest.json", SEED_PROVENANCE_FILE,
+]);
+
+/** Sorted list of kit-relative file paths under `root`, applying KIT_EXCLUDE. Stable across machines. */
+export function kitFileList(root) {
+  const files = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (KIT_EXCLUDE.has(e.name)) continue;
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else files.push(relative(root, p).split(sep).join("/"));
+    }
+  };
+  try { walk(root); } catch { /* root missing → empty list */ }
+  return files.sort();
+}
+
+/**
+ * Content fingerprint of the kit tree at `root`: a sha256 over each shipping file's path + bytes.
+ * Computed by Node (zero model tokens). Two trees with identical content yield the same short hex —
+ * the cheap, reliable "did anything change?" signal (catches edits that don't bump skills.json version).
+ */
+export function kitDigest(root) {
+  const h = createHash("sha256");
+  for (const rel of kitFileList(root)) {
+    h.update(rel); h.update("\0");
+    try { h.update(readFileSync(join(root, rel))); } catch { h.update("\0MISSING"); }
+    h.update("\n");
+  }
+  return h.digest("hex").slice(0, 16);
+}
+
+/**
+ * READ-ONLY "is the kit already installed?" probe. Touches nothing. The agent (INSTALL.md Phase 0) uses
+ * this to greet a returning user with what's installed and offer update/repair/skip instead of a blind
+ * reinstall. Signals: seed home present (AGENTS.md), the install manifest (records client+mode+MCP), and
+ * installed-vs-source version. `behaviorTarget` existence per the manifest's client is a wiring hint.
+ */
+export function kitInstallStatus() {
+  const seedHome = kitHome();
+  const seedReady = existsSync(join(seedHome, "AGENTS.md"));
+  const manifest = readJSON(join(seedHome, "install-manifest.json"));
+  const provenance = readJSON(seedProvenancePath(seedHome));
+  const installedVersion = seedReady ? versionOf(seedHome) : null;
+  const sourceVersion = versionOf(KIT_SOURCE);
+  // Prefer the content digest (catches edits that don't bump the version); fall back to version if the
+  // seed predates provenance. Digest is computed by Node — zero model tokens.
+  const sourceDigest = kitDigest(KIT_SOURCE);
+  const seededDigest = provenance && provenance.sourceDigest || null;
+  const contentMatch = seededDigest != null ? seededDigest === sourceDigest : null;
+  const upToDate = seedReady && (contentMatch != null ? contentMatch : installedVersion != null && installedVersion === sourceVersion);
+  return {
+    installed: seedReady,
+    seedHome,
+    hasManifest: !!manifest,
+    manifest: manifest ? { client: manifest.client, mode: manifest.mode, mcpServer: manifest.mcpServer, mcpConfig: manifest.mcpConfig } : null,
+    installedVersion,
+    sourceVersion,
+    seededDigest,
+    sourceDigest,
+    contentMatch,   // null = seed has no provenance (re-seed once to enable digest checks)
+    upToDate,
+  };
 }
 
 export const arg = (argv, name, def) => {

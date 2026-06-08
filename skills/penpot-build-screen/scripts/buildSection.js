@@ -32,4 +32,22 @@ for (const name of REUSE_COMPONENTS) {
   const comp = penpot.library.local.components.find(c => c.name === name);
   if (comp) { const inst = comp.instance(); section.appendChild(inst); children.push({ component: name, id: inst.id }); }
 }
+
+// LAYOUT INVARIANT: every container is a flex (or grid) Board — NEVER a plain Group and NEVER absolute x/y.
+// When you group elements inside this section (a card, a row of stats, a form field, a button cluster),
+// create a nested Board and give it its own layout BEFORE appending children. Helper to keep it consistent:
+function flexContainer(name, parentBoard, { dir = "row", gap = 16, alignItems = "center", justifyContent = "start", hSizing = "fill", vSizing = "auto" } = {}) {
+  const box = penpot.createBoard();
+  box.name = name;
+  const f = box.addFlexLayout();
+  f.dir = dir;
+  f[dir === "row" ? "columnGap" : "rowGap"] = gap;
+  f.alignItems = alignItems; f.justifyContent = justifyContent;
+  f.horizontalSizing = hSizing; f.verticalSizing = vSizing;
+  box.fills = []; // structural by default (fill policy); bind a surface token only for real cards/panels
+  parentBoard.appendChild(box); // append the container, THEN append its own children (flex orders by append)
+  return box;
+}
+// e.g. const stats = flexContainer("stats", section, { dir: "row", gap: 24 });
+
 return { sectionId: section.id, children };

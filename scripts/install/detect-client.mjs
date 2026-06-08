@@ -10,7 +10,7 @@
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { HOME, PLATFORM, kitHome, KIT_SOURCE, mcpConfigPath, behaviorTarget } from "./lib.mjs";
+import { HOME, PLATFORM, kitHome, KIT_SOURCE, mcpConfigPath, behaviorTarget, kitInstallStatus } from "./lib.mjs";
 
 const exists = (...p) => { try { return existsSync(join(...p)); } catch { return false; } };
 
@@ -31,12 +31,20 @@ const clients = ["claude-code", "claude-desktop", "cursor", "windsurf", "opencod
   behavior: behaviorTarget(id, process.cwd()),
 }));
 
+const install = kitInstallStatus();
+
 process.stdout.write(JSON.stringify({
   os: PLATFORM,
   node: process.version,
   cwd: process.cwd(),
   kitSource: KIT_SOURCE,
   seedDest: kitHome(),
+  install,   // already installed? → { installed, seedHome, hasManifest, manifest, installedVersion, sourceVersion, upToDate }
   clients,
   note: "Detection is a hint — confirm the host client with the user. Unknown client → use --client generic (configure MCP from templates/ + attach AGENTS.md).",
+  installNote: install.installed
+    ? (install.upToDate
+        ? `Kit ALREADY installed at ${install.seedHome} (v${install.installedVersion}, up to date). Offer update/repair/skip — don't blindly reinstall.`
+        : `Kit ALREADY installed at ${install.seedHome} (v${install.installedVersion ?? "?"}; source v${install.sourceVersion ?? "?"}). Offer to update (re-seed) — re-running is safe/idempotent.`)
+    : "No prior install detected — proceed with a fresh install.",
 }, null, 2) + "\n");

@@ -10,7 +10,9 @@
  * Usage:
  *   PENPOT_MCP_KEY=... node scripts/install/install.mjs --client cursor --mode remote --target-dir /abs/project
  *   node scripts/install/install.mjs --client windsurf --mode local --dry-run
- * Flags: --client (required) · --mode remote|local · --target-dir <abs> · --force · --dry-run
+ *   node scripts/install/install.mjs --client claude-code --mode none   # user already has the Penpot MCP
+ * Flags: --client (required) · --mode remote|local|none · --target-dir <abs> · --force · --dry-run
+ *        (--mode none skips the MCP config step entirely; the kit still seeds + wires behavior)
  * Output: JSON { ok, steps:{seed,mcp,behavior}, manifest, summary }.
  */
 import { execFileSync } from "node:child_process";
@@ -30,6 +32,7 @@ const dryRun = flag(argv, "dry-run");
 const out = (o) => { process.stdout.write(JSON.stringify(o, null, 2) + "\n"); };
 const fail = (m) => { out({ ok: false, error: m }); process.exit(1); };
 if (!client) fail("--client is required");
+if (!["remote", "local", "none"].includes(mode)) fail(`--mode must be remote|local|none (got ${mode})`);
 
 function run(script, args, { passKey = false } = {}) {
   const env = { ...process.env };
@@ -51,16 +54,22 @@ const seed = run("install-seed.mjs", [...common]);
 if (!seed.ok) fail(`seed step failed: ${seed.error}`);
 const kit = seed.dest || kitHome();
 
-// 2) MCP config (key via env → only this child)
-const mcpArgs = ["--client", client, "--mode", mode, ...common, ...(force ? ["--force"] : [])];
-const mcp = run("write-mcp-config.mjs", mcpArgs, { passKey: true });
+// 2) MCP config (key via env → only this child).
+// mode=none → user already has the Penpot MCP configured; skip this step cleanly instead of stalling.
+let mcp;
+if (mode === "none") {
+  mcp = { ok: true, action: "skipped", message: "MCP config skipped (--mode none): user already has the Penpot MCP installed." };
+} else {
+  const mcpArgs = ["--client", client, "--mode", mode, ...common, ...(force ? ["--force"] : [])];
+  mcp = run("write-mcp-config.mjs", mcpArgs, { passKey: true });
+}
 
 // 3) behavior (points at the seed)
 const behavior = run("install-behavior.mjs", ["--client", client, "--kit-path", kit, "--target-dir", targetDir, ...common]);
 
 // manifest for uninstall
 const files = [...(mcp.touched || []), ...(behavior.touched || [])];
-const manifest = { kitSeed: kit, client, mode, files, mcpServer: mcp.server || "penpot", mcpConfig: mcp.configPath };
+const manifest = { kitSeed: kit, client, mode, files, mcpServer: mode === "none" ? null : (mcp.server || "penpot"), mcpConfig: mcp.configPath || null };
 const manifestPath = join(kit, "install-manifest.json");
 if (!dryRun) { mkdirSync(dirname(manifestPath), { recursive: true }); writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n", "utf8"); }
 
@@ -71,7 +80,7 @@ out({
   manifest: dryRun ? manifest : manifestPath,
   summary: {
     client, mode, seed: kit,
-    mcp: mcp.ok ? `${mcp.action} → ${mcp.configPath}` : mcp.message || mcp.error,
+    mcp: mcp.action === "skipped" ? mcp.message : (mcp.ok ? `${mcp.action} → ${mcp.configPath}` : mcp.message || mcp.error),
     behavior: behavior.userAction,
     nextStep: "Open your Penpot file + the MCP plugin (keep it open), restart the client, then call high_level_overview to verify.",
   },

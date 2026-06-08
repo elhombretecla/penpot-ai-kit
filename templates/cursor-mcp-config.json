@@ -1,0 +1,12 @@
+{
+  "_comment": "Cursor — Penpot MCP. REMOTE: streamable-HTTP endpoint (use the url form, or the mcp-remote proxy if your client is stdio-only). LOCAL: mcp-remote proxy to the self-hosted SSE endpoint. Replace YOUR_SECRET_MCP_KEY. Keep the Penpot plugin window open during a session.",
+  "mcpServers": {
+    "penpot-remote": {
+      "url": "https://design.penpot.app/mcp/stream?userToken=YOUR_SECRET_MCP_KEY"
+    },
+    "penpot-local": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:4401/sse", "--allow-http"]
+    }
+  }
+}

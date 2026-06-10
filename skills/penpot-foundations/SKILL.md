@@ -115,8 +115,10 @@ Three token tiers (see `shared/tokens-schema.json`):
 - **semantic** — intent aliases referencing primitives (`color.text.default` → `{color.gray.900}`, `spacing.inset.md` → `{spacing.4}`). **This is what shapes bind to.**
 - **components** — optional per-component overrides referencing semantic tokens. Create only when a component needs its own surface.
 
-Themes are modeled as Penpot token themes (`addTheme({ group, name })`) that activate a semantic set;
-primitives stay constant, semantic values switch per theme.
+Set layout (see `shared/modes-and-policies.md`): mode-invariant semantics live in `semantic`; **colour**
+semantics live in `modes/light` / `modes/dark` (same names in both). Themes are modeled as Penpot token
+themes (`addTheme({ group, name })`) that toggle the matching `modes/*` set; primitives and the
+mode-invariant `semantic` set stay constant.
 
 ## 9. Modes & Policies
 Default **review**. Creating a new token, building a theme, or applying tokens to shapes all require a
@@ -136,8 +138,9 @@ Ledger keys under `RUN_ID` (see `shared/state-management.md`): `phase`, `created
 | 4 Apply/Infer | before/after on a sample | Approve bindings? |
 
 ## 12. Naming Conventions
-Dot-notation per `shared/naming-conventions.md`: sets are `primitives` / `semantic` / `components`;
-tokens are lowercase dot paths; themes grouped `mode` with names `Light` / `Dark` / `High Contrast`.
+Dot-notation per `shared/naming-conventions.md`: sets are `primitives` / `semantic` (mode-invariant) /
+`modes/light` + `modes/dark` (colour) / optional `components`; tokens are lowercase dot paths; themes
+grouped `mode` with names `Light` / `Dark` / `High Contrast`.
 
 ## 13. Anti-Rationalization Table
 | Excuse the LLM makes | Why it's wrong | Deterministic countermeasure |

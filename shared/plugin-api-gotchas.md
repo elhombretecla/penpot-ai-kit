@@ -52,9 +52,19 @@ Create token sets/tokens through `penpot.library.local.tokens`:
 - `addTheme({ group, name })` — **object argument** (e.g. `{ group: "mode", name: "Light" }`).
 
 `applyToken(token, properties)` property names are specific: `"fill"`, `"strokeColor"`, `"fontSize"`,
-`"fontWeight"`, `"opacity"`, `"rowGap"`, `"columnGap"`, `"paddingLeft/Top/Right/Bottom"`, the four
-border-radius corners `"borderRadiusTopLeft/TopRight/BottomRight/BottomLeft"`, `"width"`, `"height"`,
-or `"all"`. There is **no** single `"borderRadius"` or `"padding"` property — use the four parts or `"all"`.
+`"fontWeight"`, `"opacity"`, `"rowGap"`, `"columnGap"`, the four border-radius corners
+`"borderRadiusTopLeft/TopRight/BottomRight/BottomLeft"`, `"width"`, `"height"`. There is **no** single
+`"borderRadius"` or `"padding"` property.
+
+**Padding and `"all"` do NOT accept token bindings at runtime** (verified live; see
+`docs/mcp-api-findings.md` Finding 8): `applyToken(tok, ["paddingTop"])` (any side, any numeric token
+type) and `applyToken(tok, ["all"])` throw `Value not valid`, even though the overview lists them.
+Workarounds:
+- **Padding:** set resolved NUMBERS on the layout (`flex.topPadding = …`, value from the spacing
+  token's `resolvedValue`) and record the mirrored token name in the run report so governance can
+  re-bind when the API supports it. Never "fix" a failed padding binding by mis-binding it to a gap.
+- **Radius:** apply the token to the **four explicit corner props** (works) instead of `["all"]`.
+Gaps (`"rowGap"`/`"columnGap"`) bind reliably.
 
 ## 9. Components are created from shapes, instantiated from the library
 `penpot.library.local.createComponent(shapes)` makes a component; `component.instance()` creates a
@@ -82,3 +92,43 @@ This is the #1 cause of two visual bugs:
 never a literal). Decide per board; default layout containers to transparent. See the fill policy in
 `shared/modes-and-policies.md`. Note: `fills = []` reliably clears a *raw, unbound* default fill (the
 case here); clearing a *token binding* is sticky (see #2) — overwrite it by applying the right token.
+
+## 12. NEVER mutate a variant component — it corrupts the file and hangs every save
+Observed live (design.penpot.dev v2.16.0-RC10; see `docs/mcp-api-findings.md` Finding 10):
+`LibraryVariantComponent.setVariantProperty(pos, value)` updates the variant properties but **not**
+the variant root shape's internal `:variant-name`, leaving the file failing backend
+referential-integrity validation. From then on **every component-touching mutation is rejected with
+HTTP 400 that the plugin never surfaces** — calls hang ~30 s, the session dies, and unflushed
+mutations roll back. The same poison applies to `addVariant()` + rename, `comp.instance()` +
+`detach()` on a variant, `createComponent` on a detached variant instance, and `shape.remove()` on a
+variant board. Recovery is manual (reload the Penpot tab, delete the bad container from the UI).
+
+**Safe strategy:** do not call variant-mutating APIs. Build each state as a standalone Board, then
+`createComponent([board])` **one at a time** (batching ≥5 in one call times out; allow a flush pause
+between calls). Name them `Component / State` (e.g. `Checkbox / Disabled Checked`) so Penpot groups
+them; the user can convert them to real variants in the UI. **Reading** variants and instancing a
+specific variant (`variantComp.instance()`) are safe — only *mutation* poisons the file. If you do
+attempt the variant flow, have the user duplicate the file first and verify saves still succeed after
+the first mutation.
+
+## 13. Don't set fonts via `font.applyToText()` — it writes a corrupt `fontId`
+`font.applyToText(text, variant)` sets a broken uuid as `fontId`, so exports render with a
+serif/mono fallback. Set the font fields directly from the `Font`/`FontVariant` objects instead:
+`text.fontId = font.fontId` (e.g. `"gfont-orbitron"`), plus `fontFamily`, `fontVariantId`,
+`fontWeight`, `fontStyle`.
+
+## 14. `layoutChild.absolute` children use PAGE coordinates — and boards clip at their edges
+With `child.layoutChild.absolute = true`, setting `child.x`/`child.y` uses **absolute page
+coordinates**, not parent-relative ones (the overview claims relative — it's wrong): compute
+`parent.x + offset`. Also, boards **clip** children by default — an absolute decoration placed at or
+beyond the board edge is clipped invisible. Place edge decorations as absolute children of the
+*outer* (screen) board instead of the clipped inner board.
+
+## 15. Flex-child sizing goes through `layoutChild`, only AFTER appending
+To stretch a flex child set `child.layoutChild.horizontalSizing = "fill"` — setting
+`child.horizontalSizing = "fill"` directly throws `Value not valid`. Set any `layoutChild.*` sizing
+only **after** the child is appended to its layout parent (on an orphan shape it throws). Container
+self-sizing (`board.verticalSizing = "auto"`) works directly. Related session traps: `openPage()` is
+async — `penpot.currentPage` reflects the new page only on the *next* `execute_code` call; after a
+plugin-session restart `storage` is wiped and focus resets — re-find shapes by name and re-`openPage`
+before continuing.

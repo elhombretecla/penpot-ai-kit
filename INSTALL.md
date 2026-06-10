@@ -34,7 +34,7 @@ The helpers live in `scripts/install/`; all accept `--dry-run` and print JSON. P
 
 ## Phase 0 — Preflight (read-only, no tokens spent on kit content)
 
-1. Confirm you're at the kit root (an `AGENTS.md` is here). Check Node ≥ 18 (`node -v`); if missing, point
+1. Confirm you're at the kit root (an `AGENTS.md` is here). Check Node ≥ 22 (`node -v`); if missing, point
    the user to `docs/setup-remote.md` and stop.
 2. Probe the host (read-only):
    ```bash
@@ -47,7 +47,8 @@ The helpers live in `scripts/install/`; all accept `--dry-run` and print JSON. P
 4. **Already installed?** Read the `install` block of the same output (`installNote` summarizes it):
    - `install.installed === false` → fresh install; continue to Phase 1 normally.
    - `install.installed === true && upToDate` → tell the user it's **already installed** at
-     `install.seedHome` (version, and the recorded `manifest.client`/`mode`/`mcpServer`). Don't blindly
+     `install.seedHome` (version, and the recorded installs — `manifest.installs` lists mode/MCP **per
+     client**; `manifest.lastClient` is the most recent). Don't blindly
      reinstall — offer three choices: **update/repair** (re-run install, idempotent — refreshes the seed,
      re-wires behavior, MCP skips unless `--force`), **change client/MCP mode** (re-run with new flags),
      or **skip** (nothing to do; go to Phase 3 to verify the live bridge).
@@ -104,8 +105,13 @@ node scripts/install/install.mjs --client <id> --mode none [--target-dir <user-p
 Read its `summary` and relay it. Notes:
 - The MCP write **merges** (preserves other servers); if a `penpot` server already exists it reports
   `skipped-exists` → re-run with `--force` to update.
-- It writes the manifest to `~/.penpot-ai-kit/install-manifest.json` (uninstall = remove those files +
-  the `penpot` MCP server entry + the seed dir).
+- It writes the manifest to `~/.penpot-ai-kit/install-manifest.json`, **accumulating per client** —
+  re-installing for another client never erases an earlier client's record (uninstall = remove every
+  file listed under `installs`, the `penpot` MCP server entries, and the seed dir).
+- **Claude Code only:** the behavior step reports any stale `penpot-*` skills in `~/.claude/skills`
+  that are **not** part of this kit (`orphanSkills` — older generations whose overlapping trigger
+  descriptions shadow the kit's skills). Relay the list, ask the user, and on their OK re-run with
+  `--prune` to remove them. Never prune without asking.
 - If it reports a guard error about writing inside the kit, you passed a `--target-dir` inside the repo —
   ask the user for their real project dir and retry.
 
@@ -151,7 +157,10 @@ node scripts/install/check-updates.mjs --hook    # SILENT when current; one acti
 **Elegant zero-touch option (Claude Code):** add a `SessionStart` hook that runs the `--hook` form. It
 prints nothing when current (no noise, no tokens) and surfaces a single "updates available — re-seed"
 line into context only when the clone has moved on. Offer to wire it; the command is:
-`node <clone>/scripts/install/check-updates.mjs --hook`. (Other clients: run the check manually, or alias it.)
+`node ~/.penpot-ai-kit/scripts/install/check-updates.mjs --hook` — point it at the **seed**, not the
+clone: the clone is disposable, and the seed copy resolves the clone via the stamped `sourcePath`
+(if the clone is gone it reports `source-gone` quietly instead of breaking the hook).
+(Other clients: run the check manually, or alias it.)
 
 ## Safety rules (throughout)
 - **Confirm before writing.** Dry-run → show → apply (mirrors the kit's own Suggest → Apply-with-review).

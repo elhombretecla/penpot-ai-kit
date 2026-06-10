@@ -76,7 +76,7 @@ Claude Desktop is stdio-only, so bridge it to the local streamable-HTTP endpoint
 ```json
 {
   "mcpServers": {
-    "penpot-local": {
+    "penpot": {
       "command": "npx",
       "args": [
         "-y",
@@ -98,7 +98,7 @@ quit and reopen Claude Desktop after editing.
 ```json
 {
   "mcpServers": {
-    "penpot-local": {
+    "penpot": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "http://localhost:4401/mcp"]
     }

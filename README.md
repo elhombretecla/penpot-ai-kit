@@ -75,8 +75,8 @@ You'll connect your AI assistant to Penpot once (about 5 minutes), then just cha
   secure bridge that lets the assistant work inside your open Penpot file.)
 
 ### Step 1 — Get your Penpot “MCP Key”
-In Penpot: **Your Account → Integrations → MCP**, and generate a key. Keep it private (treat it like a
-password). Full details: [`docs/setup-remote.md`](docs/setup-remote.md).
+In Penpot: **Your Account → Integrations → MCP Key**, and generate a key. Keep it private (treat it
+like a password). Full details: [`docs/setup-remote.md`](docs/setup-remote.md).
 
 ### Step 2 — Connect your AI assistant to Penpot
 Open the ready-made config in [`templates/`](templates/) for your assistant
@@ -199,6 +199,7 @@ skills.json          aggregate manifest · .well-known/agent-skills/index.json d
 ---
 
 ## Status
-v0.1.1 — validated against the live Penpot MCP (see [`CHANGELOG.md`](CHANGELOG.md) and
-[`docs/mcp-api-findings.md`](docs/mcp-api-findings.md)). `skills.lock` integrity hashes are `pending`
+v0.2.0 — validated against the live Penpot MCP (see
+[`docs/mcp-api-findings.md`](docs/mcp-api-findings.md) for what was verified and what the API still
+gets wrong). The kit version lives in `skills.json`. `skills.lock` integrity hashes are `pending`
 (populated by a later tooling pass).

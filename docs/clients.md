@@ -28,8 +28,11 @@ A read-only guard (`assertOutsideKit`) refuses any write that resolves inside th
 | **generic** | `~/.penpot-ai-kit/mcp.generic.json` (import into your client) | JSON `mcpServers` | `~/.penpot-ai-kit/dist/penpot-kit.instructions.md` or `AGENTS.md` | inside that file |
 
 - **Claude Code (B3):** skills are installed **natively and self-contained** — `install-behavior` copies
-  each skill dir and vendors `shared/` + `policies/` into it, so the skills' repo-relative references
-  resolve and Claude Code auto-discovers them by `description`. Known limit: a few SKILL refs point at
+  each skill dir and vendors `shared/` + `policies/` into it (plus `workflows/` into `penpot-router`,
+  so the pipelines the router targets are reachable natively), so the skills' repo-relative references
+  resolve and Claude Code auto-discovers them by `description`. It also reports stale `penpot-*` skills
+  in `~/.claude/skills` that aren't part of the kit (older generations shadow the kit's triggers) —
+  remove them with `--prune` after the user confirms. Known limit: a few SKILL refs point at
   *another* skill's script by path (e.g. `penpot-foundations/scripts/...`); those are informational and
   don't resolve cross-bundle. The other clients have no skill loader → they read the seed via the pointer.
 - **Cursor / Windsurf** only read rules **per project** → their behavior pointer goes into the user's

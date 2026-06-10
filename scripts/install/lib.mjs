@@ -92,13 +92,16 @@ export function behaviorTarget(client, projectDir) {
  * B3 — build SELF-CONTAINED skill bundles for native discovery (Claude Code).
  * Each skill references shared/ and policies/ by repo-relative paths, so we vendor a copy of those two
  * folders INTO each skill dir; the existing `shared/...`/`policies/...` references then resolve within
- * the skill. Returns the skill names + the dest dir (for the manifest). Synchronous (cpSync).
+ * the skill. The router additionally gets `workflows/` vendored (it is the only skill that routes to
+ * them, and native installs would otherwise have no way to reach the pipelines). Returns the skill
+ * names + the dest dir (for the manifest). Synchronous (cpSync).
  */
 export function buildSelfContainedSkills(seedPath, destSkillsDir, { dryRun = false } = {}) {
   assertOutsideKit(destSkillsDir);
   const srcSkills = join(seedPath, "skills");
   const sharedSrc = join(seedPath, "shared");
   const policiesSrc = join(seedPath, "policies");
+  const workflowsSrc = join(seedPath, "workflows");
   const built = [];
   if (!existsSync(srcSkills)) return { skills: built, dest: destSkillsDir };
   for (const name of readdirSync(srcSkills)) {
@@ -109,10 +112,31 @@ export function buildSelfContainedSkills(seedPath, destSkillsDir, { dryRun = fal
       cpSync(skillDir, dest, { recursive: true, force: true });            // SKILL.md + references/ + scripts/
       if (existsSync(sharedSrc)) cpSync(sharedSrc, join(dest, "shared"), { recursive: true, force: true });
       if (existsSync(policiesSrc)) cpSync(policiesSrc, join(dest, "policies"), { recursive: true, force: true });
+      if (name === "penpot-router" && existsSync(workflowsSrc))
+        cpSync(workflowsSrc, join(dest, "workflows"), { recursive: true, force: true });
     }
     built.push(name);
   }
   return { skills: built, dest: destSkillsDir };
+}
+
+/**
+ * Stale penpot-* skill dirs in destSkillsDir that are NOT part of this kit (older kit generations or
+ * predecessor skills). They shadow the kit's skills with overlapping trigger descriptions, so the
+ * installer reports them and can remove them with --prune (after user confirmation).
+ */
+export function findOrphanSkills(seedPath, destSkillsDir) {
+  const kitNames = new Set();
+  const srcSkills = join(seedPath, "skills");
+  try {
+    for (const n of readdirSync(srcSkills)) if (statSync(join(srcSkills, n)).isDirectory()) kitNames.add(n);
+  } catch { return []; }
+  try {
+    return readdirSync(destSkillsDir).filter((n) => {
+      if (!n.startsWith("penpot-") || kitNames.has(n)) return false;
+      try { return statSync(join(destSkillsDir, n)).isDirectory(); } catch { return false; }
+    });
+  } catch { return []; }
 }
 
 /** Parse JSON at `p`, returning null on missing/unreadable/invalid (never throws). */
@@ -169,10 +193,22 @@ export function kitDigest(root) {
  * reinstall. Signals: seed home present (AGENTS.md), the install manifest (records client+mode+MCP), and
  * installed-vs-source version. `behaviorTarget` existence per the manifest's client is a wiring hint.
  */
+/**
+ * Normalize the uninstall manifest. Old shape (single install, overwritten per run):
+ * { client, mode, files, mcpServer, mcpConfig }. New shape (accumulates per client):
+ * { lastClient, installs: { [client]: { mode, files, mcpServer, mcpConfig } } }.
+ */
+export function normalizeManifest(manifest) {
+  if (!manifest) return null;
+  const installs = manifest.installs
+    || (manifest.client ? { [manifest.client]: { mode: manifest.mode, files: manifest.files, mcpServer: manifest.mcpServer, mcpConfig: manifest.mcpConfig } } : {});
+  return { lastClient: manifest.lastClient || manifest.client || null, clients: Object.keys(installs), installs };
+}
+
 export function kitInstallStatus() {
   const seedHome = kitHome();
   const seedReady = existsSync(join(seedHome, "AGENTS.md"));
-  const manifest = readJSON(join(seedHome, "install-manifest.json"));
+  const manifest = normalizeManifest(readJSON(join(seedHome, "install-manifest.json")));
   const provenance = readJSON(seedProvenancePath(seedHome));
   const installedVersion = seedReady ? versionOf(seedHome) : null;
   const sourceVersion = versionOf(KIT_SOURCE);
@@ -186,7 +222,7 @@ export function kitInstallStatus() {
     installed: seedReady,
     seedHome,
     hasManifest: !!manifest,
-    manifest: manifest ? { client: manifest.client, mode: manifest.mode, mcpServer: manifest.mcpServer, mcpConfig: manifest.mcpConfig } : null,
+    manifest,   // { lastClient, clients, installs: { [client]: { mode, files, mcpServer, mcpConfig } } }
     installedVersion,
     sourceVersion,
     seededDigest,

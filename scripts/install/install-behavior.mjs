@@ -13,16 +13,20 @@
  * Flags:
  *   --client claude-code|claude-desktop|cursor|windsurf|generic   (required)
  *   --kit-path <abs>    seed location (default: kitHome / ~/.penpot-ai-kit) · --target-dir <abs> (default cwd)
+ *   --prune             claude-code only: remove stale penpot-* skills in ~/.claude/skills that are
+ *                       not part of this kit (older generations shadow the kit's triggers). Without
+ *                       it they are only reported. Ask the user before passing it.
  *   --dry-run
- * Output: JSON { ok, client, kitPath, touched:[...], prompts:[...], userAction }.
+ * Output: JSON { ok, client, kitPath, touched:[...], prompts:[...], orphanSkills:[...], prunedSkills:[...], userAction }.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { kitHome, behaviorTarget, assertOutsideKit, buildSelfContainedSkills, arg, flag } from "./lib.mjs";
+import { kitHome, behaviorTarget, assertOutsideKit, buildSelfContainedSkills, findOrphanSkills, arg, flag } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const client = arg(argv, "client");
 const dryRun = flag(argv, "dry-run");
+const prune = flag(argv, "prune"); // remove stale penpot-* skills not shipped by this kit (claude-code only)
 const targetDir = arg(argv, "target-dir", process.cwd());
 const kitPath = arg(argv, "kit-path", kitHome());
 
@@ -64,6 +68,7 @@ Before ANY Penpot design work:
 1. Read ${kp}/AGENTS.md and follow it (tokens-first; never one-shot; Suggest → Apply-with-review; ask before meaningful changes; the fill policy lives in each skill's bundled shared/modes-and-policies.md).
 2. Your FIRST Penpot tool call each session is \`high_level_overview\` (no arguments).
 3. Let the request trigger the matching penpot-* skill; if it spans several, use the penpot-router skill to pick exactly ONE. Use the /penpot-* slash-commands for structured briefs.
+4. Multi-skill workflows (brief-to-screen, design-system-bootstrap, figma-migration, …) live in the penpot-router skill bundle under workflows/ (also at ${kp}/workflows/) — follow their pipeline.json when the router targets one.
 ${MARK_END}`;
 }
 
@@ -92,6 +97,8 @@ try { assertOutsideKit(target.file); } catch (e) {
 const touched = [];
 const promptsCopied = [];
 let userAction = null;
+let orphanSkills = [];   // stale penpot-* skills detected but NOT removed (need --prune + user OK)
+let prunedSkills = [];   // stale penpot-* skills removed because --prune was passed
 
 function copyPromptsAsCommands(cmdDir) {
   assertOutsideKit(cmdDir);
@@ -111,7 +118,20 @@ switch (target.kind) {
     for (const s of r.skills) touched.push(join(target.skillsDir, s));
     touched.push(upsertBlock(target.file, claudeNativeBody(kitPath)));
     copyPromptsAsCommands(target.commandsDir);
-    userAction = `Restart Claude Code. ${r.skills.length} penpot-* skills installed NATIVELY in ~/.claude/skills (self-contained — shared/ + policies/ vendored into each), plus /penpot-* commands and a slim global ~/.claude/CLAUDE.md pointer. Skills are auto-discovered by description.`;
+    userAction = `Restart Claude Code. ${r.skills.length} penpot-* skills installed NATIVELY in ~/.claude/skills (self-contained — shared/ + policies/ vendored into each; workflows/ vendored into penpot-router), plus /penpot-* commands and a slim global ~/.claude/CLAUDE.md pointer. Skills are auto-discovered by description.`;
+    // Stale penpot-* skills from older kit generations shadow these (overlapping trigger descriptions).
+    // Report them always; delete only with --prune (the agent must confirm with the user first).
+    const orphans = findOrphanSkills(kitPath, target.skillsDir);
+    if (orphans.length) {
+      if (prune) {
+        if (!dryRun) for (const o of orphans) rmSync(join(target.skillsDir, o), { recursive: true, force: true });
+        prunedSkills = orphans;
+        userAction += ` Pruned ${orphans.length} stale penpot-* skill(s) not shipped by this kit: ${orphans.join(", ")}.`;
+      } else {
+        orphanSkills = orphans;
+        userAction += ` WARNING: ${orphans.length} stale penpot-* skill(s) in ${target.skillsDir} are NOT part of this kit (${orphans.join(", ")}) — they overlap the kit's triggers and can shadow it. Confirm with the user, then re-run with --prune to remove them.`;
+      }
+    }
     break;
   }
   case "opencode-instructions": { // OpenCode: add an `instructions` pointer in global opencode.json
@@ -155,4 +175,4 @@ switch (target.kind) {
   default: fail(`unhandled behavior kind "${target.kind}"`);
 }
 
-out({ ok: true, client, kitPath, targetDir, dryRun: !!dryRun, touched, prompts: promptsCopied, userAction });
+out({ ok: true, client, kitPath, targetDir, dryRun: !!dryRun, touched, prompts: promptsCopied, orphanSkills, prunedSkills, userAction });

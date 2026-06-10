@@ -5,6 +5,12 @@
  * Usage:   paste into execute_code (Phase 3) after createVariants.js populated storage.cf.variants.
  * Input:   storage.cf.variants = [{ props:{axis:value}, mainId, label }].
  * Output:  { containerId, properties, components:[{props}] }.
+ * ⚠️ HIGH-RISK (gotchas #12 / mcp-api-findings Finding 10): the property mutations below
+ *          (renameProperty / addProperty / setVariantProperty) have CORRUPTED live files — the
+ *          backend then rejects every save (unsurfaced HTTP 400) and the session hangs. Run this
+ *          ONLY after the user duplicated the file; verify saves persist after the FIRST mutation;
+ *          on any ~30 s hang STOP and use the fallback: standalone components named
+ *          "Component / Axis=Value", created one at a time (no variant container).
  * Note:    VALIDATED against the live API:
  *          - penpot.createVariantFromComponents(mainInstances: Board[]) returns a VariantContainer
  *            initialised with ONE property "Property 1" whose value, per component, is that component's name.

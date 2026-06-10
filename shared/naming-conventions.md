@@ -27,8 +27,11 @@
   precondition for accessibility audits (heading hierarchy) and design-to-code review.
 
 ## Token sets & themes
-- Sets: `primitives`, `semantic`, `components` (lowercase).
-- Themes: grouped, human-readable: group `mode`, names `Light` / `Dark` / `High Contrast`.
+- Sets (lowercase): `primitives`, `semantic` (mode-invariant: `spacing.*`, `radius.*`, `font.*`),
+  `modes/light` + `modes/dark` (the colour semantics that flip per mode — same token names in both),
+  and optionally `components`. See the full model in `modes-and-policies.md`.
+- Themes: grouped, human-readable: group `mode`, names `Light` / `Dark` / `High Contrast` — each
+  toggles the matching `modes/*` set.
 
 ## Run identifiers (long workflows)
 - `RUN_ID` is a short stable slug for a multi-call session, e.g. `dsb-2026-06-05-a`. Used as the

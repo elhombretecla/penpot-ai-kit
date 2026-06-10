@@ -16,6 +16,9 @@ not exist. See `shared/penpot-mcp-tool-reference.md`.
 ## 2. Always call `high_level_overview` first
 Before any Penpot action in a session, call `high_level_overview` once to load the MCP's own
 guidance. Then do read-only discovery (`penpotUtils.shapeStructure`, `tokenOverview`) before writing.
+If the client has **more than one Penpot MCP server** configured (several `penpot*` entries — e.g. a
+production and a staging instance), confirm with the user which one is the target **before any
+mutation**; never assume, and never write to two instances in one task.
 
 ## 3. The One Rule: never one-shot
 Break every task into the smallest useful unit. One logical step per `execute_code` call. Validate

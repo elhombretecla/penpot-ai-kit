@@ -44,7 +44,7 @@
     {
       "tier": "semantic",
       "purpose": "Intent-bearing aliases that reference primitives. THIS is what shapes should bind to.",
-      "tokenSet": "semantic"
+      "tokenSet": "semantic (mode-invariant: spacing/radius/type) + modes/light & modes/dark (colour semantics; same names in both sets). See shared/modes-and-policies.md."
     },
     {
       "tier": "component",
@@ -66,8 +66,8 @@
     }
   },
   "themes": {
-    "description": "Themes (e.g. light/dark/high-contrast) are modeled as Penpot token themes that toggle semantic token sets. Primitives stay constant; semantic values switch per theme.",
-    "modeled_as": "penpot.library.local.tokens.themes via addTheme({ group, name }) (object arg); each theme activates a semantic set."
+    "description": "Themes (e.g. light/dark/high-contrast) are modeled as two mutually-exclusive colour sets in a modes/ group (modes/light active by default, modes/dark inactive) holding the SAME token names. Primitives and the mode-invariant semantic set stay constant; bindings re-resolve by name when the active modes/* set switches. See shared/modes-and-policies.md.",
+    "modeled_as": "penpot.library.local.tokens.themes via addTheme({ group, name }) (object arg); each theme toggles the matching modes/* set."
   },
   "governanceRules": {
     "noHardcodedColor": "No raw hex/rgb/hsl on shape fills/strokes when a matching semantic color token exists.",

@@ -21,6 +21,9 @@ message so agents self-correct." They're ordered by impact on agent reliability.
 - **Second pass (2026-06-08):** a full skill-battery run against a real, component-heavy file (dark
   gradient login + dashboard, 11 components, 0 tokens) surfaced two more live limitations — Findings 8
   and 9 below — and falsified one earlier "no action" claim (padding token binding; see Finding 8).
+- **Third pass (sessions through 2026-06-10, incl. design.penpot.dev v2.16.0-RC10):** real build
+  sessions surfaced three more — Findings 10–12 below — including one **file-corrupting** failure mode
+  (variant mutation, Finding 10) and an extension of Finding 8 (`["all"]` also rejects bindings).
 
 Impact legend: **High** = blocks a common agent task with a confusing failure · **Med** = wastes a
 retry / is non-obvious · **Low** = cosmetic or doc-only.
@@ -200,6 +203,11 @@ foundations padding bindings). The first reasonable, docs-compliant attempt fail
 or the value is wrong. Because it succeeds on gaps, agents may "fix" it by mis-binding padding to a gap,
 silently corrupting layout intent.
 
+**Extension (third pass).** `applyToken(tok, ["all"])` **also fails** (`Value not valid`) — observed
+with borderRadius tokens. The four explicit corner props work; this kit now documents "four corners,
+never `all`" and mirrors padding tokens as resolved values on the flex (`shared/plugin-api-gotchas.md`
+#8).
+
 **Recommendation (pick one or more):**
 - **API change (preferred):** support `applyToken` on `paddingTop/Bottom/Left/Right` (and margins) to
   match the documented `TokenSpacingProps`. Padding is the most common spacing binding after gaps.
@@ -246,16 +254,77 @@ the move silently fails, so artifacts pile up on the user's main page. Same-page
 
 ---
 
+## Finding 10 — Mutating a variant component corrupts the file and hangs every save  ·  **Critical**
+
+**Observed** (design.penpot.dev v2.16.0-RC10).
+`LibraryVariantComponent.setVariantProperty(pos, value)` updates the component's variant-properties
+but does **not** update the variant root shape's internal `:variant-name`. The file then fails backend
+`referential-integrity` validation (`:variant-bad-variant-name`): every subsequent component-touching
+mutation produces an `update-file` POST the backend rejects with **HTTP 400 that the plugin never
+surfaces** — the promise never resolves, the MCP times out at ~30 s, the session dies ~40 s, and
+unflushed mutations roll back. It looks non-deterministic because success depends on debounce timing
+vs. the next rejected save. The same poisoned-file hang was reproduced with `addVariant()` + rename,
+`comp.instance()` + `detach()` on a variant, `createComponent` on a detached variant instance, and
+`shape.remove()` on a variant board.
+
+**Recovery** is plugin-impossible (delete/rename also hang): the user must reload the Penpot tab to
+drop the local queue, delete the bad variant container from the UI (the UI writes both fields),
+reload again to confirm, then reconnect the plugin.
+
+**Agent impact.** Critical. The documented variant flow (Finding 6) **is** this mutation path — an
+agent following the docs can silently poison a real file and lose the user's unsaved work. *Reading*
+variants and instancing a specific variant component are safe.
+
+**Recommendation:**
+- **API change (preferred):** make `setVariantProperty` (and the other mutators) update
+  `:variant-name` atomically, or reject the call with a surfaced, specific error.
+- **Plugin:** surface backend save rejections to the plugin caller instead of hanging.
+- **Docs:** until fixed, mark variant mutation as unsafe from the plugin API.
+
+---
+
+## Finding 11 — `font.applyToText()` writes a corrupt `fontId`  ·  **Med-High**
+
+**Observed.** `font.applyToText(text, variant)` sets a broken uuid as the text's `fontId`; exports
+render with a serif/mono fallback. Setting the fields directly from the `Font`/`FontVariant` objects
+(`text.fontId = font.fontId`, plus `fontFamily`, `fontVariantId`, `fontWeight`, `fontStyle`) works.
+
+**Agent impact.** The convenience method is the natural first choice and the failure is only visible
+in a render — agents that don't `export_shape` after setting fonts ship wrong typography.
+
+**Recommendation:** fix `applyToText` to write the same id the direct assignment path writes; until
+then, document the direct-assignment idiom in the overview.
+
+---
+
+## Finding 12 — `layoutChild.absolute` children position in PAGE coordinates, contradicting the docs  ·  **Med**
+
+**Observed.** With `child.layoutChild.absolute = true`, setting `child.x`/`child.y` positions the
+shape in **absolute page coordinates**; the overview claims parent-relative. Agents must compute
+`parent.x + offset`. Related ergonomics traps from the same sessions: flex-child sizing must go
+through `child.layoutChild.horizontalSizing = "fill"` (direct `child.horizontalSizing = "fill"`
+throws), `layoutChild.*` must be set only **after** appending the child to its layout parent, and
+`openPage()` is async (`penpot.currentPage` updates on the *next* `execute_code` call).
+
+**Recommendation:** fix the overview's coordinate-space claim for absolute layout children, and add
+one line each for the `layoutChild` sizing path, the set-after-append requirement, and `openPage`
+asynchrony.
+
+---
+
 ## Things that need NO action (verified correct)
 - `addSet({ name })`, `addToken({ type, name, value })`, and the token `type` enum — all correct and
   consistent between the overview and `penpot_api_info`.
 - `applyToken` property names — the overview lists them correctly *as names* (the four `borderRadius*`
   corners, `fill`, `strokeColor`, `fontSize`, `rowGap`/`columnGap`, etc.), and there is no single
   `"borderRadius"`/`"padding"` property. **Caveat (see Finding 8):** although `paddingLeft/Top/Right/Bottom`
-  are *listed* under `TokenSpacingProps`, `applyToken` to them fails at runtime for every numeric token
+  and `"all"` are *listed* as valid, `applyToken` to them fails at runtime for every numeric token
   type — so the property names are documented but not all are honored. Gaps (`rowGap`/`columnGap`) work.
 - `createBoard`, `addFlexLayout`, `createComponent(shapes)`, `instance()`, `mainInstance()`,
   `switchVariant`, `findTokenByName`, `tokenOverview()`, `generateStyle`/`generateMarkup`.
+  **Caveat (see Finding 10):** these are verified on *plain* components — on **variant** components,
+  `instance()` + `detach()`, `createComponent` on a detached variant instance, and `remove()` all
+  trigger the poisoned-save hang.
 - `File.setSharedPluginData(namespace, key, value)` / `getSharedPluginData` — work exactly as documented
   (this kit relies on them for resumable run ledgers).
 - `high_level_overview` overall — comprehensive, accurate, and well-structured (Finding 5 aside).
@@ -265,17 +334,19 @@ the move silently fails, so artifacts pile up on the user's main page. Same-page
 ## Priority summary for the MCP/API team
 | # | Finding | Impact | Cheapest effective fix |
 |---|---------|--------|------------------------|
+| 10 | Variant mutation corrupts the file; saves hang silently | Critical | Update `:variant-name` atomically (or reject with a surfaced error); surface save rejections |
 | 3 | Generic error messages | High | Specific, field-level error strings (multiplies all other fixes) |
 | 1 | Reference token needs active set | High | Allow unresolved refs at creation, or a specific error |
 | 2 | Sets created inactive (undocumented) | High | One doc line + optional `addSet({name, active})` |
+| 8 | `applyToken` to padding / `"all"` fails (all token types) | High | Support the bindings, or remove them from the documented property lists |
+| 9 | No page targeting; cross-page `appendChild` silent no-op | Med-High | Make cross-page reparent work or throw; document page targeting |
+| 11 | `applyToText` writes a corrupt `fontId` | Med-High | Fix the convenience method; document the direct-assignment idiom |
 | 5 | Overview vs api_info `addTheme` mismatch | Med | Fix the overview signature |
 | 4 | Numeric token values rejected | Med | Specific error and/or coerce |
-| 8 | `applyToken` to padding fails (all token types) | High | Support padding binding, or remove padding from `TokenSpacingProps` in docs |
-| 9 | No page targeting; cross-page `appendChild` silent no-op | Med-High | Make cross-page reparent work or throw; document page targeting |
+| 12 | Absolute layout children use page coords (docs say relative) | Med | Fix the overview's coordinate-space claim |
 | 6 | Variant flow non-obvious | Med | Worked example in docs; optional convenience API |
 | 7 | `export_shape("page")` http error | Low | Repro + specific error |
 
-**One-line takeaway:** the API surface itself is sound; the biggest wins for agent reliability are
-**specific error messages** (Finding 3), **clarifying token-set activation** (Findings 1–2), and fixing
-the two binding/placement traps that block core build flows (**Findings 8–9**: padding token binding and
-cross-page shape placement).
+**One-line takeaway:** the biggest wins for agent reliability are fixing the **file-corrupting variant
+mutation** (Finding 10), **specific error messages** (Finding 3), **clarifying token-set activation**
+(Findings 1–2), and the binding/placement traps that block core build flows (**Findings 8–9**).

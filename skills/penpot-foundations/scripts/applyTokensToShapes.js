@@ -10,7 +10,9 @@ const BINDINGS = [
   { tokenName: "color.action.primary.bg", properties: ["fill"] },
   { tokenName: "radius.control", properties: ["borderRadiusTopLeft", "borderRadiusTopRight", "borderRadiusBottomRight", "borderRadiusBottomLeft"] }
   // REPLACE-ME. Valid TokenProperty values: "fill","strokeColor","fontSize","fontWeight","opacity",
-  // "rowGap","columnGap","paddingLeft/Top/Right/Bottom", the 4 borderRadius corners, "width","height", or "all".
+  // "rowGap","columnGap", the 4 borderRadius corners, "width","height".
+  // NOT bindable at runtime (gotchas #8): paddings (set resolved value on flex + report the mirrored
+  // token) and "all" (use the 4 explicit corner props for radius instead).
 ];
 
 const shapes = penpot.selection && penpot.selection.length

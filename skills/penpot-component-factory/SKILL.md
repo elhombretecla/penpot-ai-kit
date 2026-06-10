@@ -65,13 +65,26 @@ Act as a **senior component engineer**.
 **`createComponent` it** — `createVariantFromComponents` needs a component *per* variant. Use
 `scripts/createVariants.js` (collects each cell's main-instance id). ✋ Checkpoint: review the cells.
 
-**Phase 3 — Group, name axes, organize.** `scripts/createVariantGroup.js` calls
+**Phase 3 — Group, name axes, organize.** ⚠️ **HIGH-RISK PHASE — read `shared/plugin-api-gotchas.md`
+#12 first.** Mutating variant components (`setVariantProperty`, axis renames, detaching/removing
+variants) has **corrupted files and hung all subsequent saves** in live sessions (the backend rejects
+every save with an unsurfaced HTTP 400). Before this phase: ✋ Checkpoint — ask the user to **duplicate
+the file** (or confirm they accept the risk on a scratch file). Then apply **one** variant mutation,
+verify the file still saves (a later read-only call must succeed and persist), and only then continue.
+If any call hangs ~30 s, **stop immediately** and switch to the fallback below.
+
+The variant flow: `scripts/createVariantGroup.js` calls
 `penpot.createVariantFromComponents(mainInstances)`, then renames the auto-created property to your
 first axis, adds the remaining axes (`variants.addProperty()` + `renameProperty`), and sets each
 component's value via `setVariantProperty(pos, value)`. **Finally it gives the variant container a flex
 layout** — `createVariantFromComponents` stacks the variants at the same spot, so always apply a flex
 (`container.flex || container.addFlexLayout()`; row, gaps, padding, `wrap`) so they arrange and the
 container reflows to fit. ✋ Checkpoint.
+
+**Fallback (always safe):** skip the variant container entirely. Keep the per-cell components from
+Phase 2 as standalone components named `Component / Axis=Value, …` (e.g. `Button / Size=Medium,
+State=Hover`), created **one at a time** with a flush pause between calls, arranged in a labeled grid.
+Penpot groups them by the `/` prefix and the user can convert them to real variants in the UI later.
 
 **Phase 4 — Validate.** `scripts/validateComponent.js` — every required state present, all values tokenized, naming correct. Optional `scripts/switchVariantDemo.js` to prove switching. Report.
 
@@ -81,8 +94,11 @@ container reflows to fit. ✋ Checkpoint.
 3. Variant property/value names: `Property=Value`, PascalCase (`Size=Medium`, `State=Hover`).
 4. Build as a flex Board; never absolute-position children unless `layoutChild.absolute`.
 5. Idempotent: don't duplicate an existing variant.
-6. Detach only when necessary, and report it.
+6. Detach only when necessary, and report it — **never** detach a variant instance (gotchas #12).
 7. After grouping, give the variant container a flex layout — variants stack at the same position otherwise.
+8. Variant mutation is a known file-corruption risk (gotchas #12): duplicate the file before Phase 3,
+   verify saves after the first mutation, and fall back to standalone `Component / State` components
+   if anything hangs.
 
 ## 8. Domain Architecture
 Standard axes:
@@ -122,21 +138,35 @@ layers semantic (`label`, `icon`, `button`).
 | "I'll hardcode the hover color." | Breaks theming and governance. | Use/propose a semantic token (`color.action.primary.hover.bg`). |
 | "Absolute-position the icon, it's easier." | Fights flex; breaks resizing. | Use flex order + `layoutChild`; absolute only with `layoutChild.absolute` and a reason. |
 | "I'll assume the variant-creation method/args." | Variant API is easy to get wrong. | Use `penpot.createVariantFromComponents(mainInstances)`; verify with `penpot_api_info('Variants')`. |
+| "Variant mutation worked once — I'll batch the rest in one call." | One bad `setVariantProperty` poisons the file silently; every later save hangs (gotchas #12). | One mutation → verify saves persist → continue. On any ~30 s hang, stop and use the standalone-components fallback. |
 
 ## 14. Helper Code Snippets
 ```js
-// Base as a flex Board (Phase 1)
+// Base as a flex Board (Phase 1) — gaps/fill bound to tokens; padding mirrors a token (gotchas #8)
 const board = penpot.createBoard();
 board.name = "Button";
 const flex = board.addFlexLayout();
-flex.dir = "row"; flex.rowGap = 8; flex.columnGap = 8;
-flex.topPadding = flex.bottomPadding = 8; flex.leftPadding = flex.rightPadding = 16;
+flex.dir = "row";
 flex.horizontalSizing = "auto"; flex.verticalSizing = "auto";
+
+// gap binds to a token (works); padding cannot — set the token's RESOLVED value and report the mirror
+const gapTok = penpotUtils.findTokenByName("spacing.inset.sm");   // or propose it at the checkpoint
+if (gapTok) board.applyToken(gapTok, ["columnGap"]);
+const padY = penpotUtils.findTokenByName("spacing.8");
+const padX = penpotUtils.findTokenByName("spacing.16");
+flex.topPadding = flex.bottomPadding = padY ? Number(padY.resolvedValue) : 8;   // mirrors spacing.8
+flex.leftPadding = flex.rightPadding  = padX ? Number(padX.resolvedValue) : 16; // mirrors spacing.16
+
+// FILL POLICY: a button is a SURFACE — bind its bg token (never a literal, never the default white)
+board.fills = [];
+const bgTok = penpotUtils.findTokenByName("color.action.primary.bg");
+if (bgTok) board.applyToken(bgTok, ["fill"]);
+
 const label = penpot.createText("Button");
 board.appendChild(label);
 penpot.currentPage.root.appendChild(board);
 const comp = penpot.library.local.createComponent([board]);
-return { component: comp.name, id: comp.mainInstance().id };
+return { component: comp.name, id: comp.mainInstance().id, padMirrors: ["spacing.8", "spacing.16"] };
 ```
 
 ## 15. Reference Resources

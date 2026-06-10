@@ -109,7 +109,12 @@ request maps cleanly to one target, continue. If it maps to two or more with com
 3. Note any secondary intents queued for later.
 4. Invoke / instruct the target skill. The router's job ends here; it performs no mutations.
 **Exit criterion:** exactly one target named, contract emitted, secondary intents queued.
-**✋ Checkpoint:** "Routing to X — confirm or redirect?" (cheap to answer; prevents wrong-flow work).
+**✋ Checkpoint (conditional):** ask "Routing to X — confirm or redirect?" **only** when (a) Phase 1
+was ambiguous (two candidates with comparable confidence), or (b) the target is an expensive mutating
+flow on a file with existing content (a migration, a bootstrap over a mature system, anything that
+will restructure components). For a clean, unambiguous match, **state the route and proceed** — the
+target skill's own Phase-0 checkpoint is the user's natural review point; a second confirmation here
+is friction, not safety.
 
 ## 7. Critical Rules
 1. **Always confirm `high_level_overview` ran before acting on a route.** No routing decision is
@@ -176,7 +181,7 @@ changed), and reclassify rather than blindly continuing — routing must reflect
 |-------------|-----------------|-------------|
 | Phase 0 (discovery) | Page list, selection summary, token-set presence | (Informational — no approval; proceed.) |
 | Phase 1 (classification) — only if ambiguous | Two candidate targets in plain language | "Which best matches what you want — A or B?" |
-| Phase 2 (handoff) | Chosen target + the Token-Aware Brief Contract + queued intents | "Routing to **X** — confirm or redirect?" |
+| Phase 2 (handoff) — only if ambiguous or the target is an expensive mutating flow on existing content | Chosen target + the Token-Aware Brief Contract + queued intents | "Routing to **X** — confirm or redirect?" (clean matches: state the route and proceed) |
 
 ## 12. Naming Conventions
 The router enforces no names itself, but it must **speak the kit's vocabulary** when restating the
@@ -251,3 +256,10 @@ return { recorded: true };
 ### scripts/ (paste-into-`execute_code` templates)
 None. The router performs no mutations and needs no reusable mutation templates — its only `execute_code`
 usage is the inline read-only discovery snippets in §14.
+
+### workflows/ (vendored in native installs)
+In a native Claude Code install this skill's bundle also carries `workflows/` — the six multi-skill
+pipelines (§8's workflow targets: `routing`, `design-system-bootstrap`, `brief-to-screen`,
+`code-to-penpot-sync`, `figma-migration`, `accessibility-gate`), each a `README.md` (prose) +
+`pipeline.json` (deterministic step list). When routing to a workflow, open its files from here; in
+seed-pointer installs they live at the kit root under `workflows/`.

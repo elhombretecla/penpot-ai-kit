@@ -45,7 +45,9 @@ If your AI assistant supports MCP **and** can read this folder (Claude Code, Cla
 Windsurf, OpenCode, OpenAI Codex — CLI or desktop app — or similar), you don't have to wire anything by
 hand. Open this folder in your assistant and say:
 
-> **“Install this Penpot AI Kit.”**
+```
+Install this Penpot AI Kit
+```
 
 The assistant reads [`INSTALL.md`](INSTALL.md) and runs a short, guided install: it detects your client,
 asks just two things (**remote or local Penpot?** and your **MCP Key**), then connects the Penpot MCP and

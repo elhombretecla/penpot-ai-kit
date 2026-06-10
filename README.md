@@ -148,6 +148,73 @@ For the full picture, see [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
+## 📚 The catalog — everything the kit can do
+
+You never need to memorize these names — the router picks for you. This is the inventory, so you
+know what's on the shelf.
+
+**How each skill behaves** (its default mode):
+🔍 **Suggest** — reports and proposes, never touches the canvas · ✏️ **Review** — applies step by
+step, shows a preview at every checkpoint and waits for your OK · ⚡ **Auto-fix** — applies directly,
+but only trivially-safe changes (like renaming `Rectangle 12`).
+
+### 🧱 Skills — build & create
+
+| Skill | What it does | Say something like… |
+|-------|--------------|----------------------|
+| ✏️ `penpot-foundations` | Sets up your design tokens: color/spacing/type scales, semantic tiers, **light & dark themes** — or infers tokens from an existing design. | *“Set up a starter token system for this file.”* |
+| ✏️ `penpot-component-factory` | Builds components with the **complete** variant matrix — sizes, hierarchies, hover/pressed/focus/disabled — fully tokenized. | *“Create a Button with all its states.”* |
+| ✏️ `penpot-build-screen` | Designs a screen from a written brief, **section by section**, reusing your tokens and components. | *“Design a settings page from this brief.”* |
+| ✏️ `penpot-build-from-code` | Rebuilds an existing app page/component **from its code**, bound to your design system. | *“Turn this React page into a Penpot screen.”* |
+
+### 🔎 Skills — audit & review (they report; they never change your file)
+
+| Skill | What it does | Say something like… |
+|-------|--------------|----------------------|
+| 🔍 `penpot-audit-accessibility` | WCAG 2.1/2.2 AA audit: contrast, tap-target sizes, heading structure, focus order — with a severity-ranked report. | *“Check this screen for accessibility problems.”* |
+| 🔍 `penpot-audit-tokens` | Design-system governance: hardcoded values, off-grid spacing, orphan/duplicate tokens, detached instances. | *“Find hardcoded colors that should be tokens.”* |
+| 🔍 `penpot-design-to-code-review` | Compares the Penpot design against the real component/Storybook and reports the **drift**, side by side. | *“Does my code match this design?”* |
+
+### 🚚 Skills — migrate & housekeeping
+
+| Skill | What it does | Say something like… |
+|-------|--------------|----------------------|
+| ✏️ `penpot-migrate` | Migrates Figma → Penpot with fidelity: Auto Layout → flex, Variables → tokens, component sets → variants. | *“Bring this Figma file into Penpot.”* |
+| ⚡ `penpot-rename-layers` | Renames messy auto-generated layers to clear, semantic names (`nav`, `card-container`, `h1`…). | *“Clean up these layer names.”* |
+| 🔍 `penpot-router` | The dispatcher: reads your request, checks the file's state, and routes to exactly **one** of the above. | *“I'm not sure where to start.”* |
+
+### 🔗 Workflows — multi-step recipes that chain skills
+
+| Workflow | The recipe | Ask for it like… |
+|----------|------------|-------------------|
+| `brief-to-screen` | build a screen → audit accessibility → **fix and repeat until AA passes** | *“Take this brief and ship an accessible screen.”* |
+| `design-system-bootstrap` | tokens → core components → governance audit → clean naming | *“Bootstrap a full design system in this file.”* |
+| `code-to-penpot-sync` | build from code → drift review → reconcile, in a loop | *“Keep this Penpot file in sync with the repo.”* |
+| `figma-migration` | migrate → reconcile tokens → accessibility + governance audits | *“Migrate our whole Figma project, end to end.”* |
+| `accessibility-gate` | both audits in parallel → one merged report → only safe fixes, with your OK | *“Run every check before we hand this off.”* |
+| `routing` | preflight reads + dispatch to exactly one target | *“Where do I begin with this file?”* |
+
+### 📝 Brief templates — structured prompts for better results
+
+Vague asks produce generic output; these fill-in templates produce briefs the skills can act on
+precisely. In **Claude Code** they're slash commands; in other clients, open the file in
+[`prompts/`](prompts/) and fill it in chat.
+
+| Template | Feeds | Use it when… |
+|----------|-------|---------------|
+| `/penpot-design-brief` | build-screen | you want a screen and can describe audience, sections, constraints |
+| `/penpot-component-spec` | component-factory | you know exactly which axes/states the component needs |
+| `/penpot-migration-brief` | migrate | you're scoping a Figma migration (fidelity, mapping rules) |
+| `/penpot-audit-request` | the audits | you want a formal, scoped audit (level, exceptions, scope) |
+| `/penpot-resume-continuation` | any long run | a multi-phase run got interrupted and must resume safely |
+
+### 🛠️ Kit lifecycle
+
+Install, update, verify, multi-client, cleanup, uninstall — all in plain language. See
+[**Other things you can ask it**](#other-things-you-can-ask-it-after-installing) above.
+
+---
+
 ## For technical users
 
 <details>
@@ -163,18 +230,10 @@ Built on open standards (Anthropic Agent Skills, Agent Skills Discovery, MCP). I
 files and manifests, no build step.
 
 ### Skill catalog
-| Skill | What it does | Audiences |
-|-------|--------------|-----------|
-| `penpot-router` | Dispatch a request to one skill/workflow | all |
-| `penpot-foundations` | Token + library foundation (tiers, themes, infer) | DS, engineers |
-| `penpot-component-factory` | Components with full, tokenized variant matrices | DS, product |
-| `penpot-build-screen` | Brief → on-system screen, section by section | product |
-| `penpot-build-from-code` | App code → on-system Penpot screen | engineers, product |
-| `penpot-audit-accessibility` | WCAG 2.1/2.2 AA audit | all |
-| `penpot-audit-tokens` | Token governance audit | DS, engineers |
-| `penpot-design-to-code-review` | Drift vs source/Storybook | engineers |
-| `penpot-migrate` | Figma → Penpot via an IR | migration |
-| `penpot-rename-layers` | Semantic layer naming (shared utility) | all |
+The single inventory of skills, workflows and brief templates lives in
+[**📚 The catalog**](#-the-catalog--everything-the-kit-can-do) above (one source — it won't drift).
+Per-skill default modes are pinned in [`policies/modes.json`](policies/modes.json); audiences per
+skill are recorded in [`skills.json`](skills.json).
 
 ### Layered architecture
 ```

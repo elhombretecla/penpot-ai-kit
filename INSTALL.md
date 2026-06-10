@@ -4,7 +4,18 @@
 > prose for a human. Execute it top to bottom. Be conversational, confirm before writing, never echo
 > the user's secret key, and stop the moment something is ambiguous. It's ~4 short phases and 2 questions.
 
-If the user said something like *"Install this Penpot AI Kit"*, begin here.
+If the user said something like *"Install this Penpot AI Kit"*, begin here. Lifecycle requests map to
+sections of this same playbook — don't improvise a flow:
+
+| User asks | Go to |
+|-----------|-------|
+| install | Phase 0 → 3, in order |
+| update / "is it up to date?" (after a `git pull` or edits) | Phase 0 (already-installed branch) + Phase 4 |
+| install for **another** client | Phase 0 → 3 with the new `--client` (the manifest accumulates; nothing is lost) |
+| rotated MCP Key / switch remote↔local | Phase 1–2 with `--force` (updates the existing `penpot` entry) |
+| clean up old penpot skills | Phase 2 notes — `--prune` (Claude Code only; always confirm first) |
+| verify the connection | Phase 3 only |
+| uninstall | **Uninstall** section at the end |
 
 ## Model: a disposable seed → everything else in user/global locations
 
@@ -161,6 +172,21 @@ line into context only when the clone has moved on. Offer to wire it; the comman
 clone: the clone is disposable, and the seed copy resolves the clone via the stamped `sourcePath`
 (if the clone is gone it reports `source-gone` quietly instead of breaking the hook).
 (Other clients: run the check manually, or alias it.)
+
+## Uninstall (on request only)
+
+Manifest-driven and confirmed step by step — show the user the full removal list **before** deleting
+anything:
+1. Read `~/.penpot-ai-kit/install-manifest.json`. `installs` records, **per client**, the files that
+   were wired and which MCP config holds the `penpot` entry. (No manifest? Fall back to the per-client
+   locations table in `docs/clients.md` and confirm each path with the user.)
+2. For each client the user wants removed: delete every path under `installs[client].files`, then
+   remove the **`penpot` server entry** from its `mcpConfig` — surgically; never touch other servers
+   in that file.
+3. If a SessionStart update hook was wired (Phase 4), remove that hook entry from
+   `~/.claude/settings.json` — only the kit's entry, not the user's other hooks.
+4. Last (and only if no client remains installed): delete the seed dir `~/.penpot-ai-kit`.
+5. The cloned repo is never touched — it stays for a future reinstall; deleting it is the user's call.
 
 ## Safety rules (throughout)
 - **Confirm before writing.** Dry-run → show → apply (mirrors the kit's own Suggest → Apply-with-review).

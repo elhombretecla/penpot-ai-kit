@@ -63,6 +63,23 @@ How it stays clean and safe:
   client gets is in [`docs/clients.md`](docs/clients.md).
 - No MCP-capable assistant, or want to understand each step? Use the manual quick start below.
 
+### Other things you can ask it (after installing)
+
+Same deal — open this folder in your assistant and say it in plain language. All of these are
+covered by the same playbook ([`INSTALL.md`](INSTALL.md)), confirm before changing anything, and are
+safe to re-run:
+
+| You say… | It does… |
+|----------|----------|
+| “Update this Penpot AI Kit” (e.g. after a `git pull` or local edits) | Refreshes the installed copy and re-wires the skills. Idempotent. |
+| “Is my Penpot AI Kit up to date?” | Compares clone vs. installed copy (a content hash, costs ~0 tokens) and answers in one line. |
+| “Set up automatic update checks” | Wires a silent session-start hook that only speaks up when the kit is stale (Claude Code). |
+| “Install the kit for Cursor too” | Re-runs the install for another client — earlier installs are kept and recorded. |
+| “I rotated my MCP Key” / “Switch me to my self-hosted Penpot” | Updates the `penpot` MCP entry in your client's user config (never the repo). |
+| “Clean up old penpot skills” | Finds stale `penpot-*` skills from older kit generations that shadow the current ones, and removes them after you confirm. |
+| “Verify the Penpot connection” | Live check: `high_level_overview` + a read-only probe of your open file. |
+| “Uninstall the Penpot AI Kit” | Removes everything the install manifest recorded: wired files, the `penpot` MCP entry, the installed copy. |
+
 ---
 
 ## Quick start for designers

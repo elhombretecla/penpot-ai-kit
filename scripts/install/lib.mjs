@@ -152,8 +152,11 @@ export const seedProvenancePath = (seedHome = kitHome()) => join(seedHome, SEED_
 
 // Dev-only / heavy / generated paths excluded from the runtime seed AND from the content digest, so the
 // digest reflects only what actually ships and changes meaningfully. Keep in sync with install-seed.mjs.
+// Assistant-local config dirs (.claude, .cursor, …) are excluded too: clients rewrite them on the fly
+// (e.g. permission grants), which would make the digest flap "stale" with no real kit change.
 export const KIT_EXCLUDE = new Set([
   ".git", "node_modules", "evals", "dist",
+  ".claude", ".cursor", ".windsurf", ".qwen",
   ".penpot-kit-install.json", "install-manifest.json", SEED_PROVENANCE_FILE,
 ]);
 

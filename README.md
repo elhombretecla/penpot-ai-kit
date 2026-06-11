@@ -15,7 +15,7 @@ The kit is meant to be adapted. You can shape it around your team’s workflow, 
 
 > New to this? The fastest path is to let your AI assistant **install the kit for you** —
 > see **[Fastest setup](#fastest-setup--let-your-assistant-install-it)** below.
-> Prefer to do it by hand? The **[Quick start for designers](#quick-start-for-designers)** walks every step. No coding required.
+> Prefer to do it by hand? The **[Quick start — Step by step guide](#quick-start--step-by-step-guide)** walks every step. No coding required.
 
 ---
 
@@ -82,7 +82,7 @@ safe to re-run:
 
 ---
 
-## Quick start for designers
+## Quick start — Step by step guide
 
 You'll connect your AI assistant to Penpot once (about 5 minutes), then just chat with it.
 

@@ -39,7 +39,7 @@ You don't need to know the names of any “skills” — just ask.
 
 ---
 
-## ⚡ Fastest setup — let your assistant install it
+## Fastest setup — let your assistant install it
 
 If your AI assistant supports MCP **and** can read this folder (Claude Code, Claude Desktop, Cursor,
 Windsurf, OpenCode, OpenAI Codex — CLI or desktop app — or similar), you don't have to wire anything by
@@ -148,7 +148,7 @@ For the full picture, see [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
-## 📚 The catalog — everything the kit can do
+## The catalog — everything the kit can do
 
 You never need to memorize these names — the router picks for you. This is the inventory, so you
 know what's on the shelf.
@@ -158,7 +158,7 @@ know what's on the shelf.
 step, shows a preview at every checkpoint and waits for your OK · ⚡ **Auto-fix** — applies directly,
 but only trivially-safe changes (like renaming `Rectangle 12`).
 
-### 🧱 Skills — build & create
+### Skills — build & create
 
 | Skill | What it does | Say something like… |
 |-------|--------------|----------------------|
@@ -175,7 +175,7 @@ but only trivially-safe changes (like renaming `Rectangle 12`).
 | 🔍 `penpot-audit-tokens` | Design-system governance: hardcoded values, off-grid spacing, orphan/duplicate tokens, detached instances. | *“Find hardcoded colors that should be tokens.”* |
 | 🔍 `penpot-design-to-code-review` | Compares the Penpot design against the real component/Storybook and reports the **drift**, side by side. | *“Does my code match this design?”* |
 
-### 🚚 Skills — migrate & housekeeping
+### Skills — migrate & housekeeping
 
 | Skill | What it does | Say something like… |
 |-------|--------------|----------------------|
@@ -183,7 +183,7 @@ but only trivially-safe changes (like renaming `Rectangle 12`).
 | ⚡ `penpot-rename-layers` | Renames messy auto-generated layers to clear, semantic names (`nav`, `card-container`, `h1`…). | *“Clean up these layer names.”* |
 | 🔍 `penpot-router` | The dispatcher: reads your request, checks the file's state, and routes to exactly **one** of the above. | *“I'm not sure where to start.”* |
 
-### 🔗 Workflows — multi-step recipes that chain skills
+### Workflows — multi-step recipes that chain skills
 
 | Workflow | The recipe | Ask for it like… |
 |----------|------------|-------------------|
@@ -194,7 +194,7 @@ but only trivially-safe changes (like renaming `Rectangle 12`).
 | `accessibility-gate` | both audits in parallel → one merged report → only safe fixes, with your OK | *“Run every check before we hand this off.”* |
 | `routing` | preflight reads + dispatch to exactly one target | *“Where do I begin with this file?”* |
 
-### 📝 Brief templates — structured prompts for better results
+### Brief templates — structured prompts for better results
 
 Vague asks produce generic output; these fill-in templates produce briefs the skills can act on
 precisely. In **Claude Code** they're slash commands; in other clients, open the file in
@@ -208,7 +208,7 @@ precisely. In **Claude Code** they're slash commands; in other clients, open the
 | `/penpot-audit-request` | the audits | you want a formal, scoped audit (level, exceptions, scope) |
 | `/penpot-resume-continuation` | any long run | a multi-phase run got interrupted and must resume safely |
 
-### 🛠️ Kit lifecycle
+### Kit lifecycle
 
 Install, update, verify, multi-client, cleanup, uninstall — all in plain language. See
 [**Other things you can ask it**](#other-things-you-can-ask-it-after-installing) above.
@@ -231,7 +231,7 @@ files and manifests, no build step.
 
 ### Skill catalog
 The single inventory of skills, workflows and brief templates lives in
-[**📚 The catalog**](#-the-catalog--everything-the-kit-can-do) above (one source — it won't drift).
+[**The catalog**](#-the-catalog--everything-the-kit-can-do) above (one source — it won't drift).
 Per-skill default modes are pinned in [`policies/modes.json`](policies/modes.json); audiences per
 skill are recorded in [`skills.json`](skills.json).
 

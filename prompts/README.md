@@ -16,6 +16,7 @@ because each instruction acts as a contract that constrains the model and mitiga
 |------|-----|
 | `design-brief.md` | brief → screen (drives `penpot-build-screen` / `brief-to-screen`) |
 | `component-spec.md` | a component + its variant axes (drives `penpot-component-factory`) |
+| `handoff-brief.md` | annotate a design for handoff (drives `penpot-document-handoff`) |
 | `migration-brief.md` | Figma → Penpot scope & fidelity (drives `penpot-migrate`) |
 | `audit-request.md` | accessibility / token audit scope (drives the audit skills / `accessibility-gate`) |
 | `resume-continuation.md` | resume a truncated long run by `RUN_ID` |

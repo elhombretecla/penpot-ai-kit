@@ -24,6 +24,7 @@
 | 2 | Build/extend reusable components & variant matrices | `penpot-component-factory` | "make a Button component", "build an Input with states", "add a Size axis", "turn this selection into a component", "create variants for hover/disabled" | "make a button" (a one-off shape vs. a component — confirm reuse intent) |
 | 3 | Assemble a screen/view from a brief using the existing system | `penpot-build-screen` | "design a settings screen", "lay out a dashboard", "build the pricing page from this brief", "create a profile view" | "make a page" (could be a Penpot page vs. a UI screen — confirm) |
 | 4 | Build a screen/view from code/markup | `penpot-build-from-code` | "create this React page in Penpot", "push this JSX to a board", "build the screen to match this component code", "here's the HTML, make the design" | "build this in Penpot" *with code attached* → from-code; without code → `penpot-build-screen` |
+| 4b | Document/annotate a design for handoff | `penpot-document-handoff` | "document this design", "annotate this screen", "prepare this for handoff", "add observation notes", "create a critique card", "explain this flow for devs", "spec this for handoff" | "prepare for handoff" (annotation layer vs. `penpot-rename-layers` for semantic names — confirm: explaining intent → document-handoff; tidy layer names → rename-layers) |
 | 5 | Accessibility audit (WCAG 2.1/2.2) | `penpot-audit-accessibility` | "check accessibility", "WCAG AA audit", "contrast check", "are touch targets ≥ 44px", "heading hierarchy review", "a11y report" | "review this design" (could be a11y, tokens, or code-drift — see tie-breakers) |
 | 6 | Token governance audit | `penpot-audit-tokens` | "find hardcoded colors", "audit token usage", "what's off the 4px grid", "find orphan/unused tokens", "are we using semantic tokens" | "clean up this design" (tokens vs. layer naming — confirm) |
 | 7 | Design-vs-code drift review | `penpot-design-to-code-review` | "does this design match the code", "design-to-code review", "find drift between Penpot and the component", "is the implementation faithful" | "review against the repo" (drift vs. `code-to-penpot-sync` workflow — one board vs. ongoing sync) |
@@ -56,6 +57,9 @@
   dominate → `penpot-audit-tokens`. Use Phase 0 `shapeStructure` to see which.
 - **"match the code"** → one-time check → `penpot-design-to-code-review`; ongoing reconciliation →
   `code-to-penpot-sync` (workflow).
+- **"prepare this for handoff"** → wants explanatory annotations (intent, flows, business rules, notes)
+  → `penpot-document-handoff`; wants only clean semantic layer names → `penpot-rename-layers`. If both,
+  rename first (cleaner pin targets), then document.
 - **Single skill vs. its workflow** → if the user wants *just that step*, route the skill; if they
   describe an end-to-end outcome spanning steps, route the workflow.
 

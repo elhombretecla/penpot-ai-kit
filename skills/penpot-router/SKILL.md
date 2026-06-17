@@ -140,6 +140,7 @@ Full phrasing map and fallbacks: `references/01-intent-taxonomy.md`.
 | Build / extend reusable components & variants | `penpot-component-factory` | "make a Button component with variants", "build an Input with states", "turn this into a component", "add a Size axis" |
 | Assemble a screen/view from brief + existing system | `penpot-build-screen` | "design a settings screen", "lay out a dashboard", "build the pricing page from this brief" |
 | Build a screen/view from code/markup | `penpot-build-from-code` | "create this React page in Penpot", "push this component's JSX to a board", "build the screen to match this code" |
+| Document/annotate a design for handoff | `penpot-document-handoff` | "document this design", "annotate this screen", "prepare this for handoff", "add observation notes", "create a critique card", "explain this flow for devs" |
 | Accessibility audit (WCAG) | `penpot-audit-accessibility` | "check accessibility", "WCAG AA audit", "contrast check", "are touch targets big enough", "a11y review" |
 | Token governance audit | `penpot-audit-tokens` | "find hardcoded colors", "audit token usage", "what's off the 4px grid", "find orphan/unused tokens" |
 | Compare design vs. code (drift) | `penpot-design-to-code-review` | "does this design match the code", "design-to-code review", "find drift between Penpot and the component" |

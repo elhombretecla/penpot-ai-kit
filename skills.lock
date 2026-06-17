@@ -8,6 +8,7 @@
     "penpot-component-factory": "0.1.0",
     "penpot-build-screen": "0.1.0",
     "penpot-build-from-code": "0.1.0",
+    "penpot-document-handoff": "0.1.0",
     "penpot-audit-accessibility": "0.1.0",
     "penpot-audit-tokens": "0.1.0",
     "penpot-design-to-code-review": "0.1.0",

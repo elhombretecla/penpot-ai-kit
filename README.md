@@ -166,6 +166,7 @@ but only trivially-safe changes (like renaming `Rectangle 12`).
 | ✏️ `penpot-component-factory` | Builds components with the **complete** variant matrix — sizes, hierarchies, hover/pressed/focus/disabled — fully tokenized. | *“Create a Button with all its states.”* |
 | ✏️ `penpot-build-screen` | Designs a screen from a written brief, **section by section**, reusing your tokens and components. | *“Design a settings page from this brief.”* |
 | ✏️ `penpot-build-from-code` | Rebuilds an existing app page/component **from its code**, bound to your design system. | *“Turn this React page into a Penpot screen.”* |
+| ✏️ `penpot-document-handoff` | Documents a design for **handoff**: a hideable annotation layer beside it — context card (the “How might we”, business rules, links, status), numbered pins on the UI, matching observation/recommendation notes, tooltips. Never touches the design. | *“Document this screen for handoff.”* |
 
 ### 🔎 Skills — audit & review (they report; they never change your file)
 
@@ -252,7 +253,7 @@ AGENTS.md            instructions layer
 INSTALL.md           conversational installer playbook ("Install this Penpot AI Kit")
 scripts/install/     installer helpers (install one-shot + detect-client, install-seed, write-mcp-config, install-behavior, lib)
 shared/              single source of truth (tool ref, gotchas, token schema, naming, state, modes, SKILL template)
-skills/              10 skills, each: SKILL.md + references/ (progressive disclosure) + scripts/ (execute_code templates)
+skills/              11 skills, each: SKILL.md + references/ (progressive disclosure) + scripts/ (execute_code templates)
 workflows/           6 orchestration recipes (README.md prose + pipeline.json)
 prompts/             token-aware brief templates
 templates/           MCP client configs (remote/local) + local-model calibration

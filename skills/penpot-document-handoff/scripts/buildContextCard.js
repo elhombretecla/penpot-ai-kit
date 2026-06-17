@@ -41,20 +41,26 @@ if (!card) {
   f.horizontalSizing = "fix"; f.verticalSizing = "auto";
   card.fills = []; const surf = tok(T.surface); if (surf) card.applyToken(surf, ["fill"]);
 
-  const accent = tok(T.accent), body = tok(T.body), fam = tok(T.fontFamily);
+  const accent = tok(T.accent), body = tok(T.body);
   const sizeLabel = tok(T.labelSize), sizeBody = tok(T.bodySize), sizeTitle = tok(T.titleSize);
+  // VALIDATED: set family+weight via the Font API (a fontFamilies token does NOT apply via applyToken),
+  // and apply fontSize/fill tokens. See references/04 "Validated API gotchas".
+  const ws = penpot.fonts.findByName("Work Sans");
+  const vReg = ws.variants.find(v => v.fontWeight == "400"), vMed = ws.variants.find(v => v.fontWeight == "500");
+  function mkText(chars, { size, medium, upper, fill } = {}) {
+    const t = penpot.createText(String(chars == null ? "" : chars)); t.growType = "auto-height";
+    ws.applyToText(t, medium ? vMed : vReg);
+    const s = tok(size); if (s) t.applyToken(s, ["fontSize"]);
+    if (upper) t.textTransform = "uppercase";
+    const f = tok(fill); if (f) t.applyToken(f, ["fill"]);
+    return t;
+  }
   function section(labelText, bodyText, opts = {}) {
-    const sec = penpot.createBoard(); sec.name = labelText.toLowerCase().replace(/\s+/g, "-");
+    const sec = penpot.createBoard(); sec.name = labelText.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const sf = penpotUtils.addFlexLayout(sec, "column"); sf.rowGap = 4; sf.horizontalSizing = "fill"; sf.verticalSizing = "auto";
     sec.fills = [];
-    const lab = penpot.createText(labelText); lab.growType = "auto-height"; lab.textTransform = "uppercase";
-    if (fam) lab.applyToken(fam, ["fontFamilies"]); if (sizeLabel) lab.applyToken(sizeLabel, ["fontSize"]);
-    if (accent) lab.applyToken(accent, ["fill"]); lab.fontWeight = "500";
-    const bod = penpot.createText(bodyText || ""); bod.growType = "auto-height";
-    if (fam) bod.applyToken(fam, ["fontFamilies"]);
-    if ((opts.title ? sizeTitle : sizeBody)) bod.applyToken(opts.title ? sizeTitle : sizeBody, ["fontSize"]);
-    if (body) bod.applyToken(body, ["fill"]);
-    sec.appendChild(lab); sec.appendChild(bod); // label above body
+    sec.appendChild(mkText(labelText, { size: T.labelSize, medium: true, upper: true, fill: T.accent }));
+    if (bodyText) sec.appendChild(mkText(bodyText, { size: opts.title ? T.titleSize : T.bodySize, fill: T.body }));
     card.appendChild(sec);
     return sec;
   }
@@ -67,6 +73,11 @@ if (!card) {
   if (brief.feedbackWanted) section("What type of feedback we're looking for", brief.feedbackWanted);
   if (brief.feedbackNot) section("What type of feedback we're NOT looking for", brief.feedbackNot);
   penpot.currentPage.root.appendChild(card);
+  card.resize(CARD_WIDTH, card.height);
+  // VALIDATED: auto-height text only wraps once it fills its container's width — otherwise the card
+  // renders absurdly tall. Set every text (and section board) to fill. See references/04.
+  penpotUtils.findShapes(s => s.type === "text", card).forEach(t => { if (t.layoutChild) try { t.layoutChild.horizontalSizing = "fill"; } catch (e) {} });
+  penpotUtils.findShapes(s => s.type === "board" && s.flex, card).forEach(s => { if (s.layoutChild) try { s.layoutChild.horizontalSizing = "fill"; } catch (e) {} });
 }
 
 card.resize(CARD_WIDTH, card.height);

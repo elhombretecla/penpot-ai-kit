@@ -67,34 +67,41 @@ if (!note) {
   f.topPadding = f.bottomPadding = 24; f.leftPadding = f.rightPadding = 12;
   f.horizontalSizing = "fix"; f.verticalSizing = "auto";
   note.fills = []; const surf = tok(T.surface); if (surf) note.applyToken(surf, ["fill"]);
-  const accent = tok(T.accent), body = tok(T.body), fam = tok(T.fontFamily),
-        sLabel = tok(T.labelSize), sBody = tok(T.bodySize);
+  const accent = tok(T.accent), body = tok(T.body);
+  // VALIDATED: family+weight via Font API (fontFamilies token does NOT apply via applyToken);
+  // fontSize/fill via tokens. See references/04 "Validated API gotchas".
+  const ws = penpot.fonts.findByName("Work Sans");
+  const vReg = ws.variants.find(v => v.fontWeight == "400"), vMed = ws.variants.find(v => v.fontWeight == "500");
+  const mkText = (chars, { size, medium, upper, fill } = {}) => { const t = penpot.createText(String(chars == null ? "" : chars));
+    t.growType = "auto-height"; ws.applyToText(t, medium ? vMed : vReg);
+    const s = tok(size); if (s) t.applyToken(s, ["fontSize"]); if (upper) t.textTransform = "uppercase";
+    const f = tok(fill); if (f) t.applyToken(f, ["fill"]); return t; };
   // header: small pin badge + uppercase title
   const header = penpot.createBoard(); header.name = "header";
   const hf = penpotUtils.addFlexLayout(header, "row"); hf.columnGap = 8; hf.alignItems = "center";
   hf.horizontalSizing = "fill"; hf.verticalSizing = "auto"; header.fills = [];
-  const badge = penpot.createBoard(); badge.resize(24, 24); badge.borderRadius = 9999; badge.fills = [];
-  if (accent) badge.applyToken(accent, ["fill"]);
-  const bnum = penpot.createText(String(PIN.n)); bnum.align = "center"; bnum.verticalAlign = "center";
-  const on = tok(T.onAccent); if (on) bnum.applyToken(on, ["fill"]); badge.appendChild(bnum);
-  penpotUtils.setParentXY(bnum, 8, 4);
-  const title = penpot.createText(PIN.title); title.growType = "auto-height"; title.textTransform = "uppercase";
-  title.fontWeight = "500"; if (fam) title.applyToken(fam, ["fontFamilies"]);
-  if (sLabel) title.applyToken(sLabel, ["fontSize"]); if (accent) title.applyToken(accent, ["fill"]);
+  const badge = penpot.createBoard(); badge.name = "badge"; badge.fills = []; if (accent) badge.applyToken(accent, ["fill"]);
+  badge.resize(24, 24); badge.borderRadius = 9999;
+  const bnum = mkText(String(PIN.n), { size: T.labelSize, medium: true, fill: T.onAccent }); bnum.align = "center";
+  badge.appendChild(bnum); penpotUtils.setParentXY(bnum, 8, 4);
+  const title = mkText(PIN.title, { size: T.labelSize, medium: true, upper: true, fill: T.accent });
   header.appendChild(badge); header.appendChild(title);
+  if (badge.layoutChild) badge.layoutChild.horizontalSizing = "fix";
   function block(label, text) {
     const b = penpot.createBoard(); b.name = label.toLowerCase();
     const bf = penpotUtils.addFlexLayout(b, "column"); bf.rowGap = 4; bf.horizontalSizing = "fill"; bf.verticalSizing = "auto"; b.fills = [];
-    const l = penpot.createText(label); l.growType = "auto-height"; l.textTransform = "uppercase"; l.fontWeight = "500";
-    if (fam) l.applyToken(fam, ["fontFamilies"]); if (sLabel) l.applyToken(sLabel, ["fontSize"]); if (accent) l.applyToken(accent, ["fill"]);
-    const t = penpot.createText(text); t.growType = "auto-height";
-    if (fam) t.applyToken(fam, ["fontFamilies"]); if (sBody) t.applyToken(sBody, ["fontSize"]); if (body) t.applyToken(body, ["fill"]);
-    b.appendChild(l); b.appendChild(t); return b;
+    b.appendChild(mkText(label, { size: T.labelSize, medium: true, upper: true, fill: T.accent }));
+    b.appendChild(mkText(text, { size: T.bodySize, fill: T.body }));
+    return b;
   }
   note.appendChild(header);
   note.appendChild(block("Observation", PIN.observation));
   if (PIN.recommendation) note.appendChild(block("Recommendation", PIN.recommendation));
   penpot.currentPage.root.appendChild(note);
+  note.resize(484, note.height);
+  // VALIDATED: make body/label text fill width so it wraps (auto-height needs a width). Keep the title filling too.
+  penpotUtils.findShapes(s => s.type === "text", note).forEach(t => { if (t.layoutChild && t !== bnum) try { t.layoutChild.horizontalSizing = "fill"; } catch (e) {} });
+  penpotUtils.findShapes(s => s.type === "board" && s.flex, note).forEach(s => { if (s.layoutChild) try { s.layoutChild.horizontalSizing = "fill"; } catch (e) {} });
 } else {
   // override instance text by layer role
   const setByName = (re, val) => { const t = penpotUtils.findShape(s => s.type === "text" && re.test(s.name), note); if (t) t.characters = val; };

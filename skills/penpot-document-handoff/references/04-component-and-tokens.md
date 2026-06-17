@@ -54,6 +54,21 @@ they exist to be instanced and text-overridden.
   → No feedback). Title bound to `font.annotation.title`.
 - **Tooltip** (optional) — `Tooltip / Top` and `/ Bottom`: content container + arrow path.
 
+## Validated API gotchas (from a live run)
+Confirmed against the real Penpot MCP — bake these into any text you create:
+- **Don't apply a `fontFamilies` token with `applyToken(tok, ["fontFamilies"])`** — it throws
+  `Field message is invalid`. Set the family+weight with the Font API instead:
+  `const ws = penpot.fonts.findByName("Work Sans"); ws.applyToText(text, variant)` where `variant` is
+  `ws.variants.find(v => v.fontWeight == "500")` (or `"400"`). `fontSize` and `fill` tokens DO apply
+  fine via `applyToken(tok, ["fontSize"])` / `["fill"]`.
+- **`text.fontWeight = "500"` throws** unless the current font has that weight. Set the family first via
+  `ws.applyToText` with the chosen variant; don't set `fontWeight` on the default font.
+- **Auto-height text won't wrap** until you give it width: after appending to a flex parent, set
+  `text.layoutChild.horizontalSizing = "fill"` (and the same on each section board). Otherwise cards
+  render absurdly tall.
+- **`penpot.group(shapes)` works** but its tool call sometimes times out on the *return* while the group
+  is actually created — verify by re-reading `group.name` rather than re-grouping (idempotency).
+
 ## Idempotency
 Before creating anything, re-check it doesn't already exist (by name / by `storage.dh.kit`). Creating a
 second `Chip Note` component is a bug. If a partial kit exists, create only the missing pieces.

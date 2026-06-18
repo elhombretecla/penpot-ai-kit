@@ -168,7 +168,7 @@ but only trivially-safe changes (like renaming `Rectangle 12`).
 | ✏️ `penpot-build-from-code` | Rebuilds an existing app page/component **from its code**, bound to your design system. | *“Turn this React page into a Penpot screen.”* |
 | ✏️ `penpot-document-handoff` | Documents a design for **handoff**: a hideable annotation layer beside it — context card (the “How might we”, business rules, links, status), numbered pins on the UI, matching observation/recommendation notes, tooltips. Never touches the design. | *“Document this screen for handoff.”* |
 
-### 🔎 Skills — audit & review (they report; they never change your file)
+### Skills — audit & review (they report; they never change your file)
 
 | Skill | What it does | Say something like… |
 |-------|--------------|----------------------|
@@ -275,8 +275,5 @@ skills.json          aggregate manifest · .well-known/agent-skills/index.json d
 
 ---
 
-## Status
-v0.2.0 — validated against the live Penpot MCP (see
-[`docs/mcp-api-findings.md`](docs/mcp-api-findings.md) for what was verified and what the API still
-gets wrong). The kit version lives in `skills.json`. `skills.lock` integrity hashes are `pending`
-(populated by a later tooling pass).
+## License
+- [Creative Commons Attribution 4.0 International Public License](https://creativecommons.org/licenses/by/4.0/)
